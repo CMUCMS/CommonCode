@@ -54,7 +54,7 @@ for obj in objects:
     headerContent += '''
   class ''' + obj + '''VarsArray {
   public:
-    ''' + obj + '''VarsArray() {}
+    ''' + obj + '''VarsArray() : size(0) {}
     ~''' + obj + '''VarsArray() {}
     void setBranches(TTree&);
     void setAddress(TTree&);
@@ -296,16 +296,20 @@ for obj in objects:
 
     at[obj] = atText
 
-includes = '#include "ObjectVars.h"\n'
+preamble = '#include "ObjectVars.h"\n'
 
 try:
     originalSrc = file('ObjectVars.cc', 'r')
     userDef = ''
 
     copy = False
+    namespace = False
     for line in originalSrc:
-        if '#include' in line and 'ObjectVars.h' not in line:
-            includes += line
+        if 'namespace susy' in line:
+            namespace = True
+            
+        if not namespace and 'ObjectVars.h' not in line and not re.match('^[ ]*/\*.*\*/[ ]*$', line):
+            preamble += line
 
         if '/* START USER-DEFINED IMPLEMENTATION (DO NOT MODIFY THIS LINE) */' in line:
             copy = True
@@ -346,6 +350,10 @@ objTreeContent = '''/* Auto-generated source file */
 #include "ObjectTree.h"
 #include "TFile.h"
 #include <stdexcept>
+#include <iostream>
+#ifndef STANDALONE
+#include "SusyEvent.h"
+#endif
 
 namespace susy {
 '''
@@ -446,13 +454,21 @@ for obj in objects:
 objTreeContent += '''
   }
 
+#ifdef STANDALONE
+  void
+  ObjectTree::initEvent(Event const&)
+  {
+    runNumber_ = 0;
+    lumiNumber_ = 0;
+    eventNumber_ = 0;
+#else
   void
   ObjectTree::initEvent(Event const& _event)
   {
     runNumber_ = _event.runNumber;
     lumiNumber_ = _event.luminosityBlockNumber;
     eventNumber_ = _event.eventNumber;
-'''
+#endif'''
 
 for obj in objects:
     objTreeContent += '''
@@ -493,9 +509,7 @@ objTreeFile.close()
 
 objVarsContent = '''/* Partially auto-generated source file - edit where indicated */
 /* Add necessary inclusions below */
-''' + includes + '''
-
-namespace susy {
+''' + preamble + '''namespace susy {
 '''
 
 for obj in objects:

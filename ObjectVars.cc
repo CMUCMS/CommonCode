@@ -6,7 +6,9 @@
 #include "TFile.h"
 #include <stdexcept>
 #include <limits>
-
+#ifndef STANDALONE
+#include "SusyEvent.h"
+#endif
 
 namespace susy {
 
@@ -138,6 +140,7 @@ namespace susy {
     iSubdet(0),
     nConstituents(0),
     nCharged(0),
+    passPUJetIdLoose(false),
     isLoose(false)
   {
   }
@@ -150,12 +153,19 @@ namespace susy {
     sumPt2(0.),
     chi2(0.),
     ndof(0.),
+    nTracks(0),
     isGood(false)
   {
   }
 
 /* START USER-DEFINED IMPLEMENTATION (DO NOT MODIFY THIS LINE) */
 
+#ifdef STANDALONE
+  void
+  PhotonVars::set(Photon const&, Event const&)
+  {
+  }
+#else
   void
   photonEffectiveAreas(double _eta, double* _effA)
   {
@@ -312,6 +322,7 @@ namespace susy {
     isMediumLV = ObjectSelector::isGoodPhoton(*this, PhMedium12LV);
     isTightLV = ObjectSelector::isGoodPhoton(*this, PhTight12LV);
   }
+#endif
 
   /*static*/
   void
@@ -323,6 +334,12 @@ namespace susy {
     _tree.SetBranchStatus("rho", 1);
   }
 
+#ifdef STANDALONE
+  void
+  ElectronVars::set(Electron const&, Event const&)
+  {
+  }
+#else
   void
   electronEffectiveAreas(double _eta, double &_effA)
   {
@@ -436,6 +453,7 @@ namespace susy {
     isMedium = ObjectSelector::isGoodElectron(*this, ElMedium12);
     isTight = ObjectSelector::isGoodElectron(*this, ElTight12);
   }
+#endif
 
   /*static*/
   void
@@ -448,6 +466,12 @@ namespace susy {
     _tree.SetBranchStatus("rho", 1);
   }
 
+#ifdef STANDALONE
+  void
+  MuonVars::set(Muon const&, Event const&)
+  {
+  }
+#else
   void
   MuonVars::set(Muon const& _mu, Event const& _event)
   {
@@ -514,6 +538,7 @@ namespace susy {
     isLoose = ObjectSelector::isGoodMuon(*this, MuLoose12);
     isTight = ObjectSelector::isGoodMuon(*this, MuTight12);
   }
+#endif  
 
   /*static*/
   void
@@ -524,6 +549,12 @@ namespace susy {
     _tree.SetBranchStatus("vertices*", 1);
   }
 
+#ifdef STANDALONE
+  void
+  JetVars::set(PFJet const&, Event const&)
+  {
+  }
+#else  
   void
   JetVars::set(PFJet const& _jet, Event const& _event)
   {
@@ -564,8 +595,11 @@ namespace susy {
 
     nCharged = _jet.chargedMultiplicity;
 
+    passPUJetIdLoose = _jet.passPuJetIdLoose(kPUJetIdFull);
+
     isLoose = ObjectSelector::isGoodJet(*this, JtLoose);
   }
+#endif
 
   /*static*/
   void
@@ -575,6 +609,12 @@ namespace susy {
     _tree.SetBranchStatus("pfJets_ak5chs*", 0);
   }
 
+#ifdef STANDALONE
+  void
+  VertexVars::set(Vertex const&)
+  {
+  }
+#else
   void
   VertexVars::set(Vertex const& _vtx)
   {
@@ -583,20 +623,21 @@ namespace susy {
     z = _vtx.position.Z();
     rho = _vtx.position.Perp();
 
+    nTracks = _vtx.tracksSize;
     sumPt2 = _vtx.sumPt2;
     chi2 = _vtx.chi2;
     ndof = _vtx.ndof;
 
     isGood = ObjectSelector::isGoodVertex(*this);
   }
-
+#endif
+  
   /*static*/
   void
   VertexVars::setBranchStatus(TTree& _tree)
   {
     _tree.SetBranchStatus("vertices*", 1);
   }
-
 /* END USER-DEFINED IMPLEMENTATION (DO NOT MODIFY THIS LINE) */
 
 }

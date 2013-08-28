@@ -2,6 +2,10 @@
 #include "ObjectTree.h"
 #include "TFile.h"
 #include <stdexcept>
+#include <iostream>
+#ifndef STANDALONE
+#include "SusyEvent.h"
+#endif
 
 namespace susy {
 
@@ -632,6 +636,7 @@ namespace susy {
     _tree.Branch("jet.iSubdet", iSubdet, "iSubdet[jet.size]/S");
     _tree.Branch("jet.nConstituents", nConstituents, "nConstituents[jet.size]/b");
     _tree.Branch("jet.nCharged", nCharged, "nCharged[jet.size]/b");
+    _tree.Branch("jet.passPUJetIdLoose", passPUJetIdLoose, "passPUJetIdLoose[jet.size]/O");
     _tree.Branch("jet.isLoose", isLoose, "isLoose[jet.size]/O");
   }
 
@@ -670,6 +675,8 @@ namespace susy {
     else notFound.push_back("jet.nConstituents");
     if(_tree.GetBranch("jet.nCharged")) _tree.SetBranchAddress("jet.nCharged", nCharged);
     else notFound.push_back("jet.nCharged");
+    if(_tree.GetBranch("jet.passPUJetIdLoose")) _tree.SetBranchAddress("jet.passPUJetIdLoose", passPUJetIdLoose);
+    else notFound.push_back("jet.passPUJetIdLoose");
     if(_tree.GetBranch("jet.isLoose")) _tree.SetBranchAddress("jet.isLoose", isLoose);
     else notFound.push_back("jet.isLoose");
     
@@ -698,6 +705,7 @@ namespace susy {
     iSubdet[size] = _vars.iSubdet;
     nConstituents[size] = _vars.nConstituents;
     nCharged[size] = _vars.nCharged;
+    passPUJetIdLoose[size] = _vars.passPUJetIdLoose;
     isLoose[size] = _vars.isLoose;
     ++size;
   }
@@ -725,6 +733,7 @@ namespace susy {
     vars.iSubdet = iSubdet[_pos];
     vars.nConstituents = nConstituents[_pos];
     vars.nCharged = nCharged[_pos];
+    vars.passPUJetIdLoose = passPUJetIdLoose[_pos];
     vars.isLoose = isLoose[_pos];
     return vars;
   }
@@ -740,6 +749,7 @@ namespace susy {
     _tree.Branch("vertex.sumPt2", sumPt2, "sumPt2[vertex.size]/F");
     _tree.Branch("vertex.chi2", chi2, "chi2[vertex.size]/F");
     _tree.Branch("vertex.ndof", ndof, "ndof[vertex.size]/F");
+    _tree.Branch("vertex.nTracks", nTracks, "nTracks[vertex.size]/s");
     _tree.Branch("vertex.isGood", isGood, "isGood[vertex.size]/O");
   }
 
@@ -762,6 +772,8 @@ namespace susy {
     else notFound.push_back("vertex.chi2");
     if(_tree.GetBranch("vertex.ndof")) _tree.SetBranchAddress("vertex.ndof", ndof);
     else notFound.push_back("vertex.ndof");
+    if(_tree.GetBranch("vertex.nTracks")) _tree.SetBranchAddress("vertex.nTracks", nTracks);
+    else notFound.push_back("vertex.nTracks");
     if(_tree.GetBranch("vertex.isGood")) _tree.SetBranchAddress("vertex.isGood", isGood);
     else notFound.push_back("vertex.isGood");
     
@@ -782,6 +794,7 @@ namespace susy {
     sumPt2[size] = _vars.sumPt2;
     chi2[size] = _vars.chi2;
     ndof[size] = _vars.ndof;
+    nTracks[size] = _vars.nTracks;
     isGood[size] = _vars.isGood;
     ++size;
   }
@@ -801,6 +814,7 @@ namespace susy {
     vars.sumPt2 = sumPt2[_pos];
     vars.chi2 = chi2[_pos];
     vars.ndof = ndof[_pos];
+    vars.nTracks = nTracks[_pos];
     vars.isGood = isGood[_pos];
     return vars;
   }
@@ -864,13 +878,21 @@ namespace susy {
     if(_setVertex) VertexVars::setBranchStatus(_input);
   }
 
+#ifdef STANDALONE
+  void
+  ObjectTree::initEvent(Event const&)
+  {
+    runNumber_ = 0;
+    lumiNumber_ = 0;
+    eventNumber_ = 0;
+#else
   void
   ObjectTree::initEvent(Event const& _event)
   {
     runNumber_ = _event.runNumber;
     lumiNumber_ = _event.luminosityBlockNumber;
     eventNumber_ = _event.eventNumber;
-
+#endif
     photonArray_.clear();
     electronArray_.clear();
     muonArray_.clear();

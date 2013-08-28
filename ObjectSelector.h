@@ -3,7 +3,6 @@
 
 #include <bitset>
 
-#include "SusyEvent.h"
 #include "ObjectVars.h"
 
 namespace susy {

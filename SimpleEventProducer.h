@@ -22,6 +22,9 @@ namespace susy {
       float ht;
       float mht;
       float mhtPhi;
+      float bsx;
+      float bsy;
+      float bsz;
       float genMet;
       float genMetPhi;
       float mtElectron;
@@ -61,9 +64,11 @@ namespace susy {
       float pf_py[NMAX];
       float pf_pz[NMAX];
       float pf_energy[NMAX];
+      bool passMetFilters;
       std::map<TString, bool> hltBits;
       std::map<TString, float> gridParams;
       void bookBranches(TTree&, bool, bool);
+      void setAddress(TTree&);
     };
 
     struct AdditionalObjVars {
@@ -99,6 +104,7 @@ namespace susy {
       float jt_genSumPt[NMAX];
       int jt_nearestGen[NMAX];
       void bookBranches(TTree&, bool, bool = true, bool = true, bool = true, bool = true);
+      void setAddress(TTree&);
     };
 
     SimpleEventProducer();

@@ -7,10 +7,9 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include "SusyEvent.h"
-
 #include "TString.h"
 #include "TVector2.h"
+#include "TLorentzVector.h"
 
 namespace susy {
 
@@ -28,9 +27,22 @@ namespace susy {
     return deltaR(_obj1.eta, _obj1.phi, _obj2.eta, _obj2.phi);
   }
 
-  TString particleName(int, bool = false);
+  template<class T1, class T2> double diObjectMass(T1 const& _o1, T2 const& _o2)
+  {
+    TLorentzVector p1(_o1.px, _o1.py, _o1.pz, _o1.energy);
+    TLorentzVector p2(_o2.px, _o2.py, _o2.pz, _o2.energy);
+    return (p1 + p2).M();
+  }
 
-  unsigned countVertices(susy::VertexCollection const&, std::vector<unsigned>* = 0);
+  template<class T1, class T2, class T3> double triObjectMass(T1 const& _o1, T2 const& _o2, T3 const& _o3)
+  {
+    TLorentzVector p1(_o1.px, _o1.py, _o1.pz, _o1.energy);
+    TLorentzVector p2(_o2.px, _o2.py, _o2.pz, _o2.energy);
+    TLorentzVector p3(_o3.px, _o3.py, _o3.pz, _o3.energy);
+    return (p1 + p2 + p3).M();
+  }
+
+  TString particleName(int, bool = false);
 
   class GoodLumis {
   public:

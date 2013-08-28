@@ -13,7 +13,7 @@ namespace susy {
 
   class PhotonVarsArray {
   public:
-    PhotonVarsArray() {}
+    PhotonVarsArray() : size(0) {}
     ~PhotonVarsArray() {}
     void setBranches(TTree&);
     void setAddress(TTree&);
@@ -66,7 +66,7 @@ namespace susy {
 
   class ElectronVarsArray {
   public:
-    ElectronVarsArray() {}
+    ElectronVarsArray() : size(0) {}
     ~ElectronVarsArray() {}
     void setBranches(TTree&);
     void setAddress(TTree&);
@@ -117,7 +117,7 @@ namespace susy {
 
   class MuonVarsArray {
   public:
-    MuonVarsArray() {}
+    MuonVarsArray() : size(0) {}
     ~MuonVarsArray() {}
     void setBranches(TTree&);
     void setAddress(TTree&);
@@ -155,7 +155,7 @@ namespace susy {
 
   class JetVarsArray {
   public:
-    JetVarsArray() {}
+    JetVarsArray() : size(0) {}
     ~JetVarsArray() {}
     void setBranches(TTree&);
     void setAddress(TTree&);
@@ -180,12 +180,13 @@ namespace susy {
     short iSubdet[NMAX];
     unsigned char nConstituents[NMAX];
     unsigned char nCharged[NMAX];
+    bool passPUJetIdLoose[NMAX];
     bool isLoose[NMAX];
   };
 
   class VertexVarsArray {
   public:
-    VertexVarsArray() {}
+    VertexVarsArray() : size(0) {}
     ~VertexVarsArray() {}
     void setBranches(TTree&);
     void setAddress(TTree&);
@@ -202,6 +203,7 @@ namespace susy {
     float sumPt2[NMAX];
     float chi2[NMAX];
     float ndof[NMAX];
+    unsigned short nTracks[NMAX];
     bool isGood[NMAX];
   };
 

@@ -1,10 +1,16 @@
 #ifndef ObjectVars_h
 #define ObjectVars_h
 
-#include "SusyEvent.h"
 #include "TTree.h"
 
 namespace susy {
+
+  class Event;
+  class Photon;
+  class Electron;
+  class Muon;
+  class PFJet;
+  class Vertex;
 
   class PhotonVars {
   public:
@@ -155,6 +161,7 @@ namespace susy {
     short iSubdet;
     unsigned char nConstituents;
     unsigned char nCharged;
+    bool passPUJetIdLoose;
     bool isLoose;
   };
 
@@ -172,6 +179,7 @@ namespace susy {
     float sumPt2;
     float chi2;
     float ndof;
+    unsigned short nTracks;
     bool isGood;
   };
 

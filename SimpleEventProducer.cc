@@ -1,6 +1,7 @@
 #include "SimpleEventProducer.h"
 #include "Utilities.h"
 #include "ObjectSelector.h"
+#include "PFParticleBugFix.h"
 
 #include "TMath.h"
 
@@ -108,6 +109,10 @@ namespace susy {
   {
     using namespace susy;
 
+    /// MET FILTERS
+
+    eventVars_.passMetFilters = _event.passMetFilters(); 
+
     /// TRIGGER BITS
 
     for(std::map<TString, bool>::iterator bItr(eventVars_.hltBits.begin()); bItr != eventVars_.hltBits.end(); ++bItr)
@@ -193,8 +198,6 @@ namespace susy {
     std::vector<Particle const*> fsParticles;
 
     if(!_event.isRealData){
-      TVector2 genMetV;
-
       eventVars_.gen_size = _event.genParticles.size();
       if(eventVars_.gen_size >= NMAX)
         throw std::runtime_error("Too many GenParticles");
@@ -226,12 +229,11 @@ namespace susy {
 
         if(particle.status != 1) continue;
        
-        if((std::abs(particle.pdgId) / 100) % 10 == 0 && particle.pdgId != 22 && particle.charge == 0)
-          genMetV += TVector2(particle.momentum.X(), particle.momentum.Y());
-
         if(particle.momentum.Pt() > 2.)
           fsParticles.push_back(&particle);
       }
+
+      TVector2 const& genMetV(_event.metMap.find("genMetTrue")->second.mEt);
 
       eventVars_.genMet = genMetV.Mod();
       eventVars_.genMetPhi = TVector2::Phi_mpi_pi(genMetV.Phi());
@@ -241,30 +243,14 @@ namespace susy {
 
     /// PF PARTICLES
 
-    std::map<std::pair<double, double>, PFParticle const*> uniqueParticles; // bug fix for tag cms533v0 / cms538v1
-
-    unsigned nPF(_event.pfParticles.size());
-    for(unsigned iP(0); iP != nPF; ++iP){
-      PFParticle const& particle(_event.pfParticles[iP]);
-      double pt(particle.momentum.Pt());
-      if(std::abs(particle.momentum.Eta()) > etaMax) continue;
-
-      uniqueParticles[std::pair<double, double>(pt, particle.momentum.Eta())] = &particle;
-    }
-
-    std::vector<PFParticle const*> pfParticles;
-    std::map<std::pair<double, double>, PFParticle const*>::iterator uEnd(uniqueParticles.end());
-    for(std::map<std::pair<double, double>, PFParticle const*>::iterator uItr(uniqueParticles.begin()); uItr != uEnd; ++uItr)
-      pfParticles.push_back(uItr->second);
-
-    nPF = pfParticles.size();
+    // bug fix for tag cms533v0 / cms538v1
+    std::vector<PFParticle const*> pfParticles(cleanPFParticles(_event.pfParticles));
+    unsigned nPF(pfParticles.size());
 
     if(savePF_){
       unsigned nSavedPF(0);
       for(unsigned iPF(0); iPF != nPF; ++iPF){
         PFParticle const& particle(*pfParticles[iPF]);
-
-        if(particle.momentum.Pt() < 3.) continue;
 
         if(nSavedPF >= NMAX)
           throw std::runtime_error("Too many PFParticles");
@@ -930,6 +916,10 @@ namespace susy {
 
     /// EVENT VARIABLES
 
+    eventVars_.bsx = _event.beamSpot.X();
+    eventVars_.bsy = _event.beamSpot.Y();
+    eventVars_.bsz = _event.beamSpot.Z();
+
     TVector2 const& metV(_event.metMap.find("pfType01CorrectedMet")->second.mEt);
 
     eventVars_.met = metV.Mod();
@@ -1004,10 +994,13 @@ namespace susy {
     _tree.Branch("mtMuonPhoton", &mtMuonPhoton, "mtMuonPhoton/F");
     _tree.Branch("enuMomentum", &enuMomentum, "enuMomentum/F");
     _tree.Branch("munuMomentum", &munuMomentum, "munuMomentum/F");
+
     for(std::map<TString, bool>::iterator bItr(hltBits.begin()); bItr != hltBits.end(); ++bItr)
       _tree.Branch(bItr->first, &bItr->second, bItr->first + "/O");
     for(std::map<TString, float>::iterator pItr(gridParams.begin()); pItr != gridParams.end(); ++pItr)
       _tree.Branch(pItr->first, &pItr->second, pItr->first + "/F");
+
+    _tree.Branch("passMetFilters", &passMetFilters, "passMetFilters/O");
 
     if(_savePF){
       _tree.Branch("pf.size", &pf_size, "pf.size/i");
@@ -1048,6 +1041,64 @@ namespace susy {
       _tree.Branch("gen.pz", gen_pz, "pz[gen.size]/F");
       _tree.Branch("gen.energy", gen_energy, "energy[gen.size]/F");
     }
+  }
+
+  void
+  SimpleEventProducer::EventVars::setAddress(TTree& _tree)
+  {
+    if(_tree.GetBranch("met")) _tree.SetBranchAddress("met", &met);
+    if(_tree.GetBranch("metPhi")) _tree.SetBranchAddress("metPhi", &metPhi);
+    if(_tree.GetBranch("mht")) _tree.SetBranchAddress("mht", &mht);
+    if(_tree.GetBranch("mhtPhi")) _tree.SetBranchAddress("mhtPhi", &mhtPhi);
+    if(_tree.GetBranch("mtElectron")) _tree.SetBranchAddress("mtElectron", &mtElectron);
+    if(_tree.GetBranch("mtElectronPhoton")) _tree.SetBranchAddress("mtElectronPhoton", &mtElectronPhoton);
+    if(_tree.GetBranch("mtMuon")) _tree.SetBranchAddress("mtMuon", &mtMuon);
+    if(_tree.GetBranch("mtMuonPhoton")) _tree.SetBranchAddress("mtMuonPhoton", &mtMuonPhoton);
+    if(_tree.GetBranch("enuMomentum")) _tree.SetBranchAddress("enuMomentum", &enuMomentum);
+    if(_tree.GetBranch("munuMomentum")) _tree.SetBranchAddress("munuMomentum", &munuMomentum);
+
+    for(std::map<TString, bool>::iterator bItr(hltBits.begin()); bItr != hltBits.end(); ++bItr)
+      if(_tree.GetBranch(bItr->first)) _tree.SetBranchAddress(bItr->first, &bItr->second);
+    for(std::map<TString, float>::iterator pItr(gridParams.begin()); pItr != gridParams.end(); ++pItr)
+      if(_tree.GetBranch(pItr->first)) _tree.SetBranchAddress(pItr->first, &pItr->second);
+
+    if(_tree.GetBranch("passMetFilters")) _tree.SetBranchAddress("passMetFilters", &passMetFilters);
+
+    if(_tree.GetBranch("pf.size")) _tree.SetBranchAddress("pf.size", &pf_size);
+    if(_tree.GetBranch("pf.charge")) _tree.SetBranchAddress("pf.charge", pf_charge);
+    if(_tree.GetBranch("pf.isPU")) _tree.SetBranchAddress("pf.isPU", pf_isPU);
+    if(_tree.GetBranch("pf.pdgId")) _tree.SetBranchAddress("pf.pdgId", pf_pdgId);
+    if(_tree.GetBranch("pf.vx")) _tree.SetBranchAddress("pf.vx", pf_vx);
+    if(_tree.GetBranch("pf.vy")) _tree.SetBranchAddress("pf.vy", pf_vy);
+    if(_tree.GetBranch("pf.vz")) _tree.SetBranchAddress("pf.vz", pf_vz);
+    if(_tree.GetBranch("pf.pt")) _tree.SetBranchAddress("pf.pt", pf_pt);
+    if(_tree.GetBranch("pf.eta")) _tree.SetBranchAddress("pf.eta", pf_eta);
+    if(_tree.GetBranch("pf.phi")) _tree.SetBranchAddress("pf.phi", pf_phi);
+    if(_tree.GetBranch("pf.mass")) _tree.SetBranchAddress("pf.mass", pf_mass);
+    if(_tree.GetBranch("pf.px")) _tree.SetBranchAddress("pf.px", pf_px);
+    if(_tree.GetBranch("pf.py")) _tree.SetBranchAddress("pf.py", pf_py);
+    if(_tree.GetBranch("pf.pz")) _tree.SetBranchAddress("pf.pz", pf_pz);
+    if(_tree.GetBranch("pf.energy")) _tree.SetBranchAddress("pf.energy", pf_energy);
+
+    if(_tree.GetBranch("genMet")) _tree.SetBranchAddress("genMet", &genMet);
+    if(_tree.GetBranch("genMetPhi")) _tree.SetBranchAddress("genMetPhi", &genMetPhi);
+
+    if(_tree.GetBranch("gen.size")) _tree.SetBranchAddress("gen.size", &gen_size);
+    if(_tree.GetBranch("gen.status")) _tree.SetBranchAddress("gen.status", gen_status);
+    if(_tree.GetBranch("gen.charge")) _tree.SetBranchAddress("gen.charge", gen_charge);
+    if(_tree.GetBranch("gen.motherIndex")) _tree.SetBranchAddress("gen.motherIndex", gen_motherIndex);
+    if(_tree.GetBranch("gen.pdgId")) _tree.SetBranchAddress("gen.pdgId", gen_pdgId);
+    if(_tree.GetBranch("gen.vx")) _tree.SetBranchAddress("gen.vx", gen_vx);
+    if(_tree.GetBranch("gen.vy")) _tree.SetBranchAddress("gen.vy", gen_vy);
+    if(_tree.GetBranch("gen.vz")) _tree.SetBranchAddress("gen.vz", gen_vz);
+    if(_tree.GetBranch("gen.pt")) _tree.SetBranchAddress("gen.pt", gen_pt);
+    if(_tree.GetBranch("gen.eta")) _tree.SetBranchAddress("gen.eta", gen_eta);
+    if(_tree.GetBranch("gen.phi")) _tree.SetBranchAddress("gen.phi", gen_phi);
+    if(_tree.GetBranch("gen.mass")) _tree.SetBranchAddress("gen.mass", gen_mass);
+    if(_tree.GetBranch("gen.px")) _tree.SetBranchAddress("gen.px", gen_px);
+    if(_tree.GetBranch("gen.py")) _tree.SetBranchAddress("gen.py", gen_py);
+    if(_tree.GetBranch("gen.pz")) _tree.SetBranchAddress("gen.pz", gen_pz);
+    if(_tree.GetBranch("gen.energy")) _tree.SetBranchAddress("gen.energy", gen_energy);
   }
 
   void
@@ -1102,4 +1153,44 @@ namespace susy {
     }
   }
 
+  void
+  SimpleEventProducer::AdditionalObjVars::setAddress(TTree& _tree)
+  {
+    if(_tree.GetBranch("photon.dRGen")) _tree.SetBranchAddress("photon.dRGen", ph_dRGen);
+    if(_tree.GetBranch("photon.genIso")) _tree.SetBranchAddress("photon.genIso", ph_genIso);
+    if(_tree.GetBranch("photon.nearestGen")) _tree.SetBranchAddress("photon.nearestGen", ph_nearestGen);
+    if(_tree.GetBranch("photon.dRJet")) _tree.SetBranchAddress("photon.dRJet", ph_dRJet);
+    if(_tree.GetBranch("photon.dRNextJet")) _tree.SetBranchAddress("photon.dRNextJet", ph_dRNextJet);
+    if(_tree.GetBranch("photon.dRPF")) _tree.SetBranchAddress("photon.dRPF", ph_dRPF);
+    if(_tree.GetBranch("photon.nearestPF")) _tree.SetBranchAddress("photon.nearestPF", ph_nearestPF);
+    if(_tree.GetBranch("photon.pfIsPU")) _tree.SetBranchAddress("photon.pfIsPU", ph_pfIsPU);
+
+    if(_tree.GetBranch("electron.dRGen")) _tree.SetBranchAddress("electron.dRGen", el_dRGen);
+    if(_tree.GetBranch("electron.genIso")) _tree.SetBranchAddress("electron.genIso", el_genIso);
+    if(_tree.GetBranch("electron.nearestGen")) _tree.SetBranchAddress("electron.nearestGen", el_nearestGen);
+    if(_tree.GetBranch("electron.dRJet")) _tree.SetBranchAddress("electron.dRJet", el_dRJet);
+    if(_tree.GetBranch("electron.dRNextJet")) _tree.SetBranchAddress("electron.dRNextJet", el_dRNextJet);
+    if(_tree.GetBranch("electron.dRPhoton")) _tree.SetBranchAddress("electron.dRPhoton", el_dRPhoton);
+    if(_tree.GetBranch("electron.dRNextPhoton")) _tree.SetBranchAddress("electron.dRNextPhoton", el_dRNextPhoton);
+    if(_tree.GetBranch("electron.dRPF")) _tree.SetBranchAddress("electron.dRPF", el_dRPF);
+    if(_tree.GetBranch("electron.nearestPF")) _tree.SetBranchAddress("electron.nearestPF", el_nearestPF);
+    if(_tree.GetBranch("electron.pfIsPU")) _tree.SetBranchAddress("electron.pfIsPU", el_pfIsPU);
+
+    if(_tree.GetBranch("muon.dRGen")) _tree.SetBranchAddress("muon.dRGen", mu_dRGen);
+    if(_tree.GetBranch("muon.genIso")) _tree.SetBranchAddress("muon.genIso", mu_genIso);
+    if(_tree.GetBranch("muon.nearestGen")) _tree.SetBranchAddress("muon.nearestGen", mu_nearestGen);
+    if(_tree.GetBranch("muon.dRJet")) _tree.SetBranchAddress("muon.dRJet", mu_dRJet);
+    if(_tree.GetBranch("muon.dRNextJet")) _tree.SetBranchAddress("muon.dRNextJet", mu_dRNextJet);
+    if(_tree.GetBranch("muon.dRPhoton")) _tree.SetBranchAddress("muon.dRPhoton", mu_dRPhoton);
+    if(_tree.GetBranch("muon.dRNextPhoton")) _tree.SetBranchAddress("muon.dRNextPhoton", mu_dRNextPhoton);
+    if(_tree.GetBranch("muon.dRPF")) _tree.SetBranchAddress("muon.dRPF", mu_dRPF);
+    if(_tree.GetBranch("muon.nearestPF")) _tree.SetBranchAddress("muon.nearestPF", mu_nearestPF);
+    if(_tree.GetBranch("muon.pfIsPU")) _tree.SetBranchAddress("muon.pfIsPU", mu_pfIsPU);
+
+    if(_tree.GetBranch("jet.dRGen")) _tree.SetBranchAddress("jet.dRGen", jt_dRGen);
+    if(_tree.GetBranch("jet.genSumPt")) _tree.SetBranchAddress("jet.genSumPt", jt_genSumPt);
+    if(_tree.GetBranch("jet.nearestGen")) _tree.SetBranchAddress("jet.nearestGen", jt_nearestGen);
+  }
+
 }
+

@@ -137,24 +137,6 @@ namespace susy {
     return name;
   }
 
-  unsigned
-  countVertices(VertexCollection const& _vertices, std::vector<unsigned>* _indices/* = 0*/)
-  {
-    unsigned nVtx(0);
-    if(_indices) _indices->clear();
-
-    unsigned nV(_vertices.size());
-    for(unsigned iV(0); iV != nV; ++iV){
-      VertexVars vars(_vertices[iV]);
-      if(vars.isGood){
-	if(_indices) _indices->push_back(iV);
-	++nVtx;
-      }
-    }
-
-    return nVtx;
-  }
-
   GoodLumis::GoodLumis() :
     list_(),
     isGood_(true),

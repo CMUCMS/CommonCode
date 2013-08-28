@@ -8,6 +8,7 @@
 
 bool fillSelected(true);
 bool fillAll(true);
+bool fillPF(false);
 
 void
 produceSimpleTree(TTree& _input, TString const& _outputName, long _maxEvents = -1)
@@ -42,7 +43,9 @@ produceSimpleTree(TTree& _input, TString const& _outputName, long _maxEvents = -
   _input.SetBranchStatus("genParticles*", 1);
   _input.SetBranchStatus("pfParticles*", 1);
   _input.SetBranchStatus("met_pfType01CorrectedMet*", 1);
+  _input.SetBranchStatus("met_genMetTrue*", 1);
   _input.SetBranchStatus("gridParams*", 1);
+  _input.SetBranchStatus("beamSpot*", 1);
   susy::ObjectTree::setBranchStatus(_input); // set status = 1 for photon-, electron-, muon-, jet-, and vertex-related branches
 
   /* SET INPUT BRANCH ADDRESS TO EVENT OBJECT */
@@ -97,8 +100,7 @@ produceSimpleTree(TTree& _input, TString const& _outputName, long _maxEvents = -
   producer.setMuonId(susy::MuTight12);
   producer.setJetId(susy::JtLoose);
 
-  /* DO NOT SAVE PF PARTICLES (WHICH IS THE DEFAULT) */
-  producer.setSavePF(true);
+  producer.setSavePF(fillPF);
 
   /* INITIALIZE EVENT PRODUCER */
   producer.initialize(evtTree, selectedObjTree, allObjTree, event->isRealData);
@@ -108,9 +110,8 @@ produceSimpleTree(TTree& _input, TString const& _outputName, long _maxEvents = -
   bool failed(false);
   long iEntry(0);
 
-  try{
-
-    while(iEntry != _maxEvents){
+  while(iEntry != _maxEvents){
+    try{
       int nRead(event->getEntry(iEntry++));
       if(nRead == 0) break;
       else if(nRead < 0){
@@ -120,23 +121,21 @@ produceSimpleTree(TTree& _input, TString const& _outputName, long _maxEvents = -
 
       if(iEntry % 10000 == 1) std::cout << "Processing event " << iEntry - 1 << "..." << std::endl;
 
-      if(!event->passMetFilters()) continue;
-   
       producer.produce(*event);
 
       evtTree->Fill();
       if(fillSelected) selectedObjTree->Fill();
       if(fillAll) allObjTree->Fill();
     }
+    catch(std::exception& e){
+      std::cerr << "Exception caught:" << std::endl;
+      std::cerr << e.what() << std::endl;
+      std::cerr << "Run " << event->runNumber << ", Lumi " << event->luminosityBlockNumber << ", Event " << event->eventNumber << " in " << std::endl;
+      std::cerr << _input.GetCurrentFile()->GetName() << std::endl;
 
-  }
-  catch(std::exception& e){
-    std::cerr << "Exception caught:" << std::endl;
-    std::cerr << e.what() << std::endl;
-    std::cerr << "Run " << event->runNumber << ", Lumi " << event->luminosityBlockNumber << ", Event " << event->eventNumber << " in " << std::endl;
-    std::cerr << _input.GetCurrentFile()->GetName() << std::endl;
-
-    failed = true;
+      failed = true;
+      break;
+    }
   }
 
   std::cout << "Processed " << iEntry << " Events." << std::endl;
@@ -152,7 +151,7 @@ produceSimpleTree(TTree& _input, TString const& _outputName, long _maxEvents = -
   delete outputFile;
 
   if(failed)
-    throw std::runtime_error("");
+    throw std::runtime_error("produceSimpleTree");
 }
 
 void
