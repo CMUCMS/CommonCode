@@ -59,6 +59,39 @@ namespace susy {
     mutable unsigned lumi_; 
   };
 
+  class Exception : public std::runtime_error {
+  public:
+    enum Categories {
+      kObjectAnomaly,
+      kEventAnomaly,
+      kIOError,
+      kFormatError,
+      nCategories
+    };
+
+    explicit Exception(Categories _cat, std::string const& _what) :
+      runtime_error(_what),
+      category(_cat)
+    {}
+
+    std::string categoryName(){
+      switch(category){
+      case kObjectAnomaly:
+        return "ObjectAnomaly";
+      case kEventAnomaly:
+        return "EventAnomaly";
+      case kIOError:
+        return "IOError";
+      case kFormatError:
+        return "FormatError";
+      default:
+        return "Unknown";
+      }
+    }
+
+    Categories category;
+  };
+
   template<class T> void sortByPt(std::vector<T const*>& _objects, std::vector<unsigned>* _indices = 0){
     typedef std::map<double, T const*> Sorter;
     typedef typename Sorter::value_type SorterValueType;
@@ -67,7 +100,7 @@ namespace susy {
     unsigned nO(_objects.size());
 
     if(_indices && _indices->size() != nO)
-      throw std::runtime_error("susy::sortByPt: objects and indices size do not match");
+      throw std::range_error("susy::sortByPt: objects and indices size do not match");
 
     Sorter sortedObjects;
     std::map<double, unsigned> sortedIndices;
@@ -75,7 +108,7 @@ namespace susy {
     for(unsigned iO(0); iO != nO; ++iO){
       double pt(_objects[iO]->momentum.Pt());
       if(pt != pt)
-        throw std::runtime_error(TString::Format("Pt of %dth object is NaN", iO).Data());
+        throw Exception(Exception::kObjectAnomaly, TString::Format("Pt of %dth object is NaN", iO).Data());
 
       while(!sortedObjects.insert(SorterValueType(pt, _objects[iO])).second) pt += 1.e-5;
       if(_indices) sortedIndices[pt] = (*_indices)[iO];

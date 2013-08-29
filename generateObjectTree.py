@@ -262,7 +262,7 @@ for obj in objects:
   ''' + obj + 'VarsArray::push_back(' + obj + '''Vars const& _vars)
   {
     if(size == NMAX - 1)
-      throw std::runtime_error("Too many ''' + obj + '''s");
+      throw Exception(Exception::kEventAnomaly, "Too many ''' + obj + '''s");
 '''
     
     for (type, name) in varList[obj]:
@@ -280,7 +280,7 @@ for obj in objects:
   ''' + obj + '''VarsArray::at(unsigned _pos) const
   {
     if(_pos >= size)
-      throw std::runtime_error("''' + obj + '''Vars out-of-bounds");
+      throw std::range_error("''' + obj + '''Vars out-of-bounds");
       
     ''' + obj + '''Vars vars;
 '''
@@ -348,8 +348,10 @@ except:
 
 objTreeContent = '''/* Auto-generated source file */
 #include "ObjectTree.h"
+#include "Utilities.h"
+
 #include "TFile.h"
-#include <stdexcept>
+
 #include <iostream>
 #ifndef STANDALONE
 #include "SusyEvent.h"

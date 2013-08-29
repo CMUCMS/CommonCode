@@ -18,7 +18,7 @@ namespace susy {
   ObjectSelector::ObjectSelector()
   {
     if(getSelector())
-      throw std::runtime_error("ObjectSelector duplicated");
+      throw std::logic_error("ObjectSelector duplicated");
 
     singleton_ = this;
 

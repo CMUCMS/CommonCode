@@ -200,7 +200,7 @@ namespace susy {
     if(!_event.isRealData){
       eventVars_.gen_size = _event.genParticles.size();
       if(eventVars_.gen_size >= NMAX)
-        throw std::runtime_error("Too many GenParticles");
+        throw Exception(Exception::kEventAnomaly, "Too many GenParticles");
 
       for(unsigned iG(0); iG != eventVars_.gen_size; ++iG){
         Particle const& particle(_event.genParticles[iG]);
@@ -253,7 +253,7 @@ namespace susy {
         PFParticle const& particle(*pfParticles[iPF]);
 
         if(nSavedPF >= NMAX)
-          throw std::runtime_error("Too many PFParticles");
+          throw Exception(Exception::kEventAnomaly, "Too many PFParticles");
 
         eventVars_.pf_charge[nSavedPF] = particle.charge;
         eventVars_.pf_isPU[nSavedPF] = particle.isPU;

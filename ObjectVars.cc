@@ -4,7 +4,6 @@
 #include "Utilities.h"
 #include "ObjectSelector.h"
 #include "TFile.h"
-#include <stdexcept>
 #include <limits>
 #ifndef STANDALONE
 #include "SusyEvent.h"
@@ -265,7 +264,7 @@ namespace susy {
     r9 = _ph.r9;
 
     if(!_ph.superCluster)
-      throw std::runtime_error("PhotonWithNoCluster");
+      throw Exception(Exception::kObjectAnomaly, "Photon with no cluster");
 
     SuperCluster const& sc(*_ph.superCluster);
 
@@ -297,7 +296,7 @@ namespace susy {
     // but allowing the electron to miss 1 hit
     typename ElectronCollectionMap::const_iterator electronsSrc(_event.electrons.find("gsfElectrons"));
     if(electronsSrc == _event.electrons.end())
-      throw std::runtime_error("GsfElectrons not in event");
+      throw Exception(Exception::kFormatError, "GsfElectrons not in event");
 
     hasMatchedElectron = false;
     ElectronCollection const& electrons(electronsSrc->second);
@@ -372,7 +371,7 @@ namespace susy {
     energy = _el.momentum.E();
 
     if(!_el.superCluster)
-      throw std::runtime_error("ElectronWithNoCluster");
+      throw Exception(Exception::kObjectAnomaly, "Electron with no cluster");
 
     SuperCluster const& sc(*_el.superCluster);
 
@@ -386,14 +385,14 @@ namespace susy {
     else iSubdet = -1;
 
     if(!_el.gsfTrack)
-      throw std::runtime_error("ElectronWithNoTrack");
+      throw Exception(Exception::kObjectAnomaly, "Electron with no track");
 
     // TODO: Not ideal to do this for every single Electron and Muon
     unsigned nV(_event.vertices.size());
     unsigned iV(0);
     while(iV != nV && !ObjectSelector::isGoodVertex(_event.vertices[iV])) ++iV;
     if(iV == nV)
-      throw std::runtime_error("Event with no good vertex");
+      throw Exception(Exception::kEventAnomaly, "Event with no good vertex");
 
     Vertex const& primVtx(_event.vertices[iV]);
 
@@ -506,7 +505,7 @@ namespace susy {
     unsigned iV(0);
     while(iV != nV && !ObjectSelector::isGoodVertex(_event.vertices[iV])) ++iV;
     if(iV == nV)
-      throw std::runtime_error("Event with no good vertex");
+      throw Exception(Exception::kEventAnomaly, "Event with no good vertex");
 
     Vertex const& primVtx(_event.vertices[iV]);
 

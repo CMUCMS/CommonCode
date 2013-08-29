@@ -1,10 +1,13 @@
 #include "SimpleEventProducer.h"
+#include "Utilities.h"
 
 #include <iostream>
 #include <stdexcept>
 
 #include "TFile.h"
 #include "TChain.h"
+#include "TBranch.h"
+#include "TLeaf.h"
 
 bool fillSelected(true);
 bool fillAll(true);
@@ -14,6 +17,15 @@ void
 produceSimpleTree(TTree& _input, TString const& _outputName, long _maxEvents = -1)
 {
   if(_input.GetEntries() == 0) return;
+
+  TBranch* bIsRealData(_input.GetBranch("isRealData"));
+  TLeaf* lIsRealData(0);
+  if(!bIsRealData || !(lIsRealData = bIsRealData->GetLeaf("isRealData"))){
+    std::cerr << "Input does not contain the branch isRealData" << std::endl;
+    throw std::invalid_argument("Input");
+  }
+  bIsRealData->GetEntry(0);
+  bool isRealData(lIsRealData->GetValue(0) != 0);
 
   /* DEFINE OUTPUT TREES */
 
@@ -40,11 +52,11 @@ produceSimpleTree(TTree& _input, TString const& _outputName, long _maxEvents = -
   _input.SetBranchStatus("eventNumber", 1);
   _input.SetBranchStatus("metFilter*", 1);
   _input.SetBranchStatus("hlt*", 1);
-  _input.SetBranchStatus("genParticles*", 1);
+  if(!isRealData) _input.SetBranchStatus("genParticles*", 1);
   _input.SetBranchStatus("pfParticles*", 1);
   _input.SetBranchStatus("met_pfType01CorrectedMet*", 1);
-  _input.SetBranchStatus("met_genMetTrue*", 1);
-  _input.SetBranchStatus("gridParams*", 1);
+  if(!isRealData) _input.SetBranchStatus("met_genMetTrue*", 1);
+  if(!isRealData) _input.SetBranchStatus("gridParams*", 1);
   _input.SetBranchStatus("beamSpot*", 1);
   susy::ObjectTree::setBranchStatus(_input); // set status = 1 for photon-, electron-, muon-, jet-, and vertex-related branches
 
@@ -89,10 +101,12 @@ produceSimpleTree(TTree& _input, TString const& _outputName, long _maxEvents = -
 
   /* DEFINE LIST OF MC PARAMETERS TO INCLUDE */
 
-  TString gridParamList[] = {
-    "pthat"
-  };
-  producer.setGridParams(std::vector<TString>(gridParamList, gridParamList + sizeof(gridParamList) / sizeof(TString)));
+  if(!isRealData){
+    TString gridParamList[] = {
+      "pthat"
+    };
+    producer.setGridParams(std::vector<TString>(gridParamList, gridParamList + sizeof(gridParamList) / sizeof(TString)));
+  }
 
   /* DEFINE GOOD OBJECTS */
   producer.setPhotonId(susy::PhLoose12);
@@ -103,29 +117,24 @@ produceSimpleTree(TTree& _input, TString const& _outputName, long _maxEvents = -
   producer.setSavePF(fillPF);
 
   /* INITIALIZE EVENT PRODUCER */
-  producer.initialize(evtTree, selectedObjTree, allObjTree, event->isRealData);
+  producer.initialize(evtTree, selectedObjTree, allObjTree, isRealData);
 
   /* EVENT LOOP */
 
   bool failed(false);
   long iEntry(0);
+  int nRead(0);
 
-  while(iEntry != _maxEvents){
+  while(iEntry != _maxEvents && (nRead = event->getEntry(iEntry++)) != 0){
+    if(nRead < 0){
+      std::cerr << "Input corrupted at entry " << iEntry - 1 << std::endl;
+      throw std::runtime_error("IOError");
+    }
+
+    if(iEntry % 10000 == 1) std::cout << "Processing event " << iEntry - 1 << "..." << std::endl;
+
     try{
-      int nRead(event->getEntry(iEntry++));
-      if(nRead == 0) break;
-      else if(nRead < 0){
-        std::cerr << "Input corrupted at entry " << iEntry - 1 << std::endl;
-        throw std::runtime_error("IOError");
-      }
-
-      if(iEntry % 10000 == 1) std::cout << "Processing event " << iEntry - 1 << "..." << std::endl;
-
       producer.produce(*event);
-
-      evtTree->Fill();
-      if(fillSelected) selectedObjTree->Fill();
-      if(fillAll) allObjTree->Fill();
     }
     catch(std::exception& e){
       std::cerr << "Exception caught:" << std::endl;
@@ -133,12 +142,33 @@ produceSimpleTree(TTree& _input, TString const& _outputName, long _maxEvents = -
       std::cerr << "Run " << event->runNumber << ", Lumi " << event->luminosityBlockNumber << ", Event " << event->eventNumber << " in " << std::endl;
       std::cerr << _input.GetCurrentFile()->GetName() << std::endl;
 
+      susy::Exception* susyExcept(dynamic_cast<susy::Exception*>(&e));
+
+      if(susyExcept){
+        std::cerr << "This was an exception of category " << susyExcept->categoryName() << std::endl;
+
+        switch(susyExcept->category){
+        case susy::Exception::kEventAnomaly:
+          std::cerr << "Skipping event.." << std::endl;
+          continue;
+        case susy::Exception::kObjectAnomaly:
+        case susy::Exception::kIOError:
+        case susy::Exception::kFormatError:
+        default:
+          break;
+        }
+      }
+
       failed = true;
       break;
     }
+
+    evtTree->Fill();
+    if(fillSelected) selectedObjTree->Fill();
+    if(fillAll) allObjTree->Fill();
   }
 
-  std::cout << "Processed " << iEntry << " Events." << std::endl;
+  std::cout << "Processed " << iEntry - 1 << " Events." << std::endl;
 
   /* CLEANUP & FINALZE */
 

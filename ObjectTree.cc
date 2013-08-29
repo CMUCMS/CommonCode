@@ -1,7 +1,9 @@
 /* Auto-generated source file */
 #include "ObjectTree.h"
+#include "Utilities.h"
+
 #include "TFile.h"
-#include <stdexcept>
+
 #include <iostream>
 #ifndef STANDALONE
 #include "SusyEvent.h"
@@ -146,7 +148,7 @@ namespace susy {
   PhotonVarsArray::push_back(PhotonVars const& _vars)
   {
     if(size == NMAX - 1)
-      throw std::runtime_error("Too many Photons");
+      throw Exception(Exception::kEventAnomaly, "Too many Photons");
 
     pt[size] = _vars.pt;
     eta[size] = _vars.eta;
@@ -194,7 +196,7 @@ namespace susy {
   PhotonVarsArray::at(unsigned _pos) const
   {
     if(_pos >= size)
-      throw std::runtime_error("PhotonVars out-of-bounds");
+      throw std::range_error("PhotonVars out-of-bounds");
       
     PhotonVars vars;
 
@@ -371,7 +373,7 @@ namespace susy {
   ElectronVarsArray::push_back(ElectronVars const& _vars)
   {
     if(size == NMAX - 1)
-      throw std::runtime_error("Too many Electrons");
+      throw Exception(Exception::kEventAnomaly, "Too many Electrons");
 
     pt[size] = _vars.pt;
     eta[size] = _vars.eta;
@@ -417,7 +419,7 @@ namespace susy {
   ElectronVarsArray::at(unsigned _pos) const
   {
     if(_pos >= size)
-      throw std::runtime_error("ElectronVars out-of-bounds");
+      throw std::range_error("ElectronVars out-of-bounds");
       
     ElectronVars vars;
 
@@ -553,7 +555,7 @@ namespace susy {
   MuonVarsArray::push_back(MuonVars const& _vars)
   {
     if(size == NMAX - 1)
-      throw std::runtime_error("Too many Muons");
+      throw Exception(Exception::kEventAnomaly, "Too many Muons");
 
     pt[size] = _vars.pt;
     eta[size] = _vars.eta;
@@ -586,7 +588,7 @@ namespace susy {
   MuonVarsArray::at(unsigned _pos) const
   {
     if(_pos >= size)
-      throw std::runtime_error("MuonVars out-of-bounds");
+      throw std::range_error("MuonVars out-of-bounds");
       
     MuonVars vars;
 
@@ -688,7 +690,7 @@ namespace susy {
   JetVarsArray::push_back(JetVars const& _vars)
   {
     if(size == NMAX - 1)
-      throw std::runtime_error("Too many Jets");
+      throw Exception(Exception::kEventAnomaly, "Too many Jets");
 
     pt[size] = _vars.pt;
     eta[size] = _vars.eta;
@@ -714,7 +716,7 @@ namespace susy {
   JetVarsArray::at(unsigned _pos) const
   {
     if(_pos >= size)
-      throw std::runtime_error("JetVars out-of-bounds");
+      throw std::range_error("JetVars out-of-bounds");
       
     JetVars vars;
 
@@ -785,7 +787,7 @@ namespace susy {
   VertexVarsArray::push_back(VertexVars const& _vars)
   {
     if(size == NMAX - 1)
-      throw std::runtime_error("Too many Vertexs");
+      throw Exception(Exception::kEventAnomaly, "Too many Vertexs");
 
     x[size] = _vars.x;
     y[size] = _vars.y;
@@ -803,7 +805,7 @@ namespace susy {
   VertexVarsArray::at(unsigned _pos) const
   {
     if(_pos >= size)
-      throw std::runtime_error("VertexVars out-of-bounds");
+      throw std::range_error("VertexVars out-of-bounds");
       
     VertexVars vars;
 
