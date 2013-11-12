@@ -140,6 +140,7 @@ namespace susy {
     float combRelSubdetIso[NMAX];
     float combRelIso[NMAX];
     short iSubdet[NMAX];
+    float dpTpT[NMAX];
     unsigned char nMatchedStations[NMAX];
     unsigned char nLayersWithMmt[NMAX];
     unsigned char nValidMuonHits[NMAX];

@@ -480,6 +480,7 @@ namespace susy {
     _tree.Branch("muon.combRelSubdetIso", combRelSubdetIso, "combRelSubdetIso[muon.size]/F");
     _tree.Branch("muon.combRelIso", combRelIso, "combRelIso[muon.size]/F");
     _tree.Branch("muon.iSubdet", iSubdet, "iSubdet[muon.size]/S");
+    _tree.Branch("muon.dpTpT", dpTpT, "dpTpT[muon.size]/F");
     _tree.Branch("muon.nMatchedStations", nMatchedStations, "nMatchedStations[muon.size]/b");
     _tree.Branch("muon.nLayersWithMmt", nLayersWithMmt, "nLayersWithMmt[muon.size]/b");
     _tree.Branch("muon.nValidMuonHits", nValidMuonHits, "nValidMuonHits[muon.size]/b");
@@ -524,6 +525,8 @@ namespace susy {
     else notFound.push_back("muon.combRelIso");
     if(_tree.GetBranch("muon.iSubdet")) _tree.SetBranchAddress("muon.iSubdet", iSubdet);
     else notFound.push_back("muon.iSubdet");
+    if(_tree.GetBranch("muon.dpTpT")) _tree.SetBranchAddress("muon.dpTpT", dpTpT);
+    else notFound.push_back("muon.dpTpT");
     if(_tree.GetBranch("muon.nMatchedStations")) _tree.SetBranchAddress("muon.nMatchedStations", nMatchedStations);
     else notFound.push_back("muon.nMatchedStations");
     if(_tree.GetBranch("muon.nLayersWithMmt")) _tree.SetBranchAddress("muon.nLayersWithMmt", nLayersWithMmt);
@@ -570,6 +573,7 @@ namespace susy {
     combRelSubdetIso[size] = _vars.combRelSubdetIso;
     combRelIso[size] = _vars.combRelIso;
     iSubdet[size] = _vars.iSubdet;
+    dpTpT[size] = _vars.dpTpT;
     nMatchedStations[size] = _vars.nMatchedStations;
     nLayersWithMmt[size] = _vars.nLayersWithMmt;
     nValidMuonHits[size] = _vars.nValidMuonHits;
@@ -605,6 +609,7 @@ namespace susy {
     vars.combRelSubdetIso = combRelSubdetIso[_pos];
     vars.combRelIso = combRelIso[_pos];
     vars.iSubdet = iSubdet[_pos];
+    vars.dpTpT = dpTpT[_pos];
     vars.nMatchedStations = nMatchedStations[_pos];
     vars.nLayersWithMmt = nLayersWithMmt[_pos];
     vars.nValidMuonHits = nValidMuonHits[_pos];
