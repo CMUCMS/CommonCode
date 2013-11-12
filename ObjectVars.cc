@@ -494,9 +494,9 @@ namespace susy {
 
     isPFMuon = _mu.isPFMuon();
 
-    hasInnerTrack = _mu.innerTrack;
+    hasInnerTrack = (_mu.innerTrack != 0);
 
-    hasGlobalTrack = _mu.globalTrack;
+    hasGlobalTrack = (_mu.globalTrack != 0);
 
     Track const* bestTrack(pt > 200. ? _mu.highPtBestTrack : _mu.bestTrack);
     hasBestTrack = (bestTrack != 0);
@@ -514,28 +514,29 @@ namespace susy {
 
     nLayersWithMmt = _mu.nPixelLayersWithMeasurement + _mu.nStripLayersWithMeasurement;
 
-    if(hasGlobalTrack == 1) normChi2 = _mu.globalTrack->normChi2();
+    if(hasGlobalTrack) normChi2 = _mu.globalTrack->normChi2();
     else normChi2 = -1.;
 
-    if(hasGlobalTrack == 1) nValidMuonHits = _mu.globalTrack->numberOfValidMuonHits;
+    if(hasGlobalTrack) nValidMuonHits = _mu.globalTrack->numberOfValidMuonHits;
     else nValidMuonHits = 0;
 
-    if(hasBestTrack == 1) dxy = std::abs(bestTrack->dxy(primVtx.position));
+    if(hasBestTrack) dxy = std::abs(bestTrack->dxy(primVtx.position));
     else if(hasInnerTrack) dxy = std::abs(_mu.innerTrack->dxy(primVtx.position));
     else dxy = -1.;
 
-    if(hasBestTrack == 1) dz = std::abs(bestTrack->dz(primVtx.position));
+    if(hasBestTrack) dz = std::abs(bestTrack->dz(primVtx.position));
     else if(hasInnerTrack == 1) dz = std::abs(_mu.innerTrack->dz(primVtx.position));
     else dz = -1.;
 
-    if(hasInnerTrack == 1) nValidPixelHits = _mu.innerTrack->numberOfValidPixelHits;
+    if(hasInnerTrack) nValidPixelHits = _mu.innerTrack->numberOfValidPixelHits;
     else nValidPixelHits = 0;
 
     combRelSubdetIso = (_mu.ecalIsoR03 + _mu.hcalIsoR03 + _mu.trackIsoR03) / pt; 
 
     combRelIso = (_mu.sumChargedHadronPt04 + std::max(0., _mu.sumNeutralHadronEt04 + _mu.sumPhotonEt04 - 0.5 * _mu.sumPUPt04)) / pt;
 
-    if(hasBestTrack == 1) dpTpT = (bestTrack->ptError)/ pt;
+    if(hasBestTrack) dpTpT = bestTrack->ptError / pt;
+    else dpTpT = -1.;
 
     isLoose = ObjectSelector::isGoodMuon(*this, MuLoose12);
     isTight = ObjectSelector::isGoodMuon(*this, MuTight12);

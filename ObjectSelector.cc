@@ -169,15 +169,14 @@ namespace susy {
       idResults[MuGlobalMuon] = _mu.isGlobalMuon;
       idResults[MuPFMuon] = _mu.pt > 200. || _mu.isPFMuon;
       idResults[MuMatchedStations] = _mu.nMatchedStations > 1;
-      //idResults[MuLayersWithMmt] = _mu.nLayersWithMmt > (_mu.pt < 200. ? 5 : 8);
-      idResults[MuLayersWithMmt] =  _mu.nLayersWithMmt >  5  ;
+      idResults[MuLayersWithMmt] = _mu.nLayersWithMmt > 5;
       idResults[MuNormChi2] = _mu.pt > 200. || (_mu.normChi2 > 0. && _mu.normChi2 < 10.);
       idResults[MuValidMuonHits] = _mu.nValidMuonHits > 0;
       idResults[MuDxy] = _mu.dxy > 0. && _mu.dxy < 0.2;
       idResults[MuDz] = _mu.dz > 0. && _mu.dz < 0.5;
       idResults[MuValidPixelHits] = _mu.nValidPixelHits > 0;
       idResults[MuCombIso] = _mu.combRelIso < 0.12;
-      idResults[MudpTpT] = _mu.pt < 200. || ( _mu.dpTpT < 0.3) ;
+      idResults[MudpTpT] = _mu.pt < 200. || (_mu.dpTpT < 0.3);
 
     }
 
