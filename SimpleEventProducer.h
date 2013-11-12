@@ -5,6 +5,7 @@
 #include "ObjectSelector.h"
 
 #include "SusyEvent.h"
+#include "SusyTriggerEvent.h"
 
 #include <vector>
 #include <map>
@@ -66,7 +67,9 @@ namespace susy {
       float pf_energy[NMAX];
       bool passMetFilters;
       std::map<TString, bool> hltBits;
+      std::map<TString, bool> hltFilterBits;
       std::map<TString, float> gridParams;
+
       void bookBranches(TTree&, bool, bool);
       void setAddress(TTree&);
     };
@@ -103,8 +106,15 @@ namespace susy {
       float jt_dRGen[NMAX];
       float jt_genSumPt[NMAX];
       int jt_nearestGen[NMAX];
+
+      std::map<TString, bool*> ph_matchHLTObj;
+      std::map<TString, bool*> el_matchHLTObj;
+      std::map<TString, bool*> mu_matchHLTObj;
+
       void bookBranches(TTree&, bool, bool = true, bool = true, bool = true, bool = true);
       void setAddress(TTree&);
+
+      ~AdditionalObjVars();
     };
 
     SimpleEventProducer();
@@ -112,11 +122,18 @@ namespace susy {
 
     void initialize(TTree*, TTree*, TTree*, bool);
 
+    void extractTriggerObjects(TriggerEvent&);
     void produce(Event const&);
 
-    void setHLTPaths(std::vector<TString> const&);
-    void setGridParams(std::vector<TString> const&);
+    void addHLTPath(TString const&);
+    void addHLTEventFilter(TString const&);
+    void addHLTPhotonFilter(TString const&);
+    void addHLTElectronFilter(TString const&);
+    void addHLTMuonFilter(TString const&);
+    void addGridParam(TString const&);
+
     void addPreselected(TTree&, bool, std::vector<unsigned> const*, std::vector<unsigned> const*, std::vector<unsigned> const*, std::vector<unsigned> const*, std::vector<unsigned> const*);
+
     void setSavePF(bool _val) { savePF_ = _val; }
 
     void setPhotonId(PhotonId _id) { photonId_ = _id; }
@@ -155,6 +172,10 @@ namespace susy {
     std::vector<std::vector<unsigned> const*> muonPreselection_;
     std::vector<std::vector<unsigned> const*> jetPreselection_;
     std::vector<std::vector<unsigned> const*> vtxPreselection_;
+
+    std::map<TString, TriggerObjectCollection> photonHLTObjects_;
+    std::map<TString, TriggerObjectCollection> electronHLTObjects_;
+    std::map<TString, TriggerObjectCollection> muonHLTObjects_;
   };
 
 }

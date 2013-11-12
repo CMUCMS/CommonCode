@@ -6,6 +6,7 @@
 #include "TMath.h"
 
 #include <iostream>
+#include <algorithm>
 
 float const mW(80.39);
 
@@ -46,39 +47,114 @@ namespace susy {
   SimpleEventProducer::initialize(TTree* _evtTree, TTree* _selectedObjTree, TTree* _allObjTree, bool _isRealData)
   {
     eventVars_.bookBranches(*_evtTree, _isRealData, savePF_);
-    _evtTree->SetAutoSave(10000000);
 
     if(_selectedObjTree){
       saveSelected_ = true;
 
       selectedObjects_.setOutput(*_selectedObjTree);
       selectedAdd_.bookBranches(*_selectedObjTree, _isRealData);
-      _selectedObjTree->SetAutoSave(10000000);
     }
+    else
+      saveSelected_ = false;
 
     if(_allObjTree){
       saveAll_ = true;
 
       allObjects_.setOutput(*_allObjTree);
       allAdd_.bookBranches(*_allObjTree, _isRealData);
-      _allObjTree->SetAutoSave(10000000);
     }
+    else
+      saveAll_ = false;
   }
 
   void
-  SimpleEventProducer::setHLTPaths(std::vector<TString> const& _paths)
+  SimpleEventProducer::addHLTPath(TString const& _path)
   {
-    eventVars_.hltBits.clear();
-    for(unsigned iP(0); iP != _paths.size(); ++iP)
-      eventVars_.hltBits[_paths[iP]] = false;
+    eventVars_.hltBits[_path] = false;
   }
 
   void
-  SimpleEventProducer::setGridParams(std::vector<TString> const& _params)
+  SimpleEventProducer::addHLTEventFilter(TString const& _path)
   {
-    eventVars_.gridParams.clear();
-    for(unsigned iG(0); iG != _params.size(); ++iG)
-      eventVars_.gridParams[_params[iG]] = 0.;
+    eventVars_.hltFilterBits[_path] = false;
+  }
+
+  void
+  SimpleEventProducer::addHLTPhotonFilter(TString const& _filter)
+  {
+    std::map<TString, bool*>::iterator itr(selectedAdd_.ph_matchHLTObj.find(_filter));
+    if(itr == selectedAdd_.ph_matchHLTObj.end())
+      itr = selectedAdd_.ph_matchHLTObj.insert(std::pair<TString, bool*>(_filter, new bool[NMAX])).first;
+    std::fill_n(itr->second, NMAX, false);
+
+    itr = allAdd_.ph_matchHLTObj.find(_filter);
+    if(itr == allAdd_.ph_matchHLTObj.end())
+      itr = allAdd_.ph_matchHLTObj.insert(std::pair<TString, bool*>(_filter, new bool[NMAX])).first;
+    std::fill_n(itr->second, NMAX, false);
+
+    for(unsigned iPre(0); iPre != preselectedAdd_.size(); ++iPre){
+      AdditionalObjVars& objects(*preselectedAdd_[iPre]);
+      itr = objects.ph_matchHLTObj.find(_filter);
+      if(itr == objects.ph_matchHLTObj.end())
+        itr = objects.ph_matchHLTObj.insert(std::pair<TString, bool*>(_filter, new bool[NMAX])).first;
+      std::fill_n(itr->second, NMAX, false);
+    }
+
+    photonHLTObjects_[_filter] = TriggerObjectCollection();
+  }
+
+  void
+  SimpleEventProducer::addHLTElectronFilter(TString const& _filter)
+  {
+    std::map<TString, bool*>::iterator itr(selectedAdd_.el_matchHLTObj.find(_filter));
+    if(itr == selectedAdd_.el_matchHLTObj.end())
+      itr = selectedAdd_.el_matchHLTObj.insert(std::pair<TString, bool*>(_filter, new bool[NMAX])).first;
+    std::fill_n(itr->second, NMAX, false);
+
+    itr = allAdd_.el_matchHLTObj.find(_filter);
+    if(itr == allAdd_.el_matchHLTObj.end())
+      itr = allAdd_.el_matchHLTObj.insert(std::pair<TString, bool*>(_filter, new bool[NMAX])).first;
+    std::fill_n(itr->second, NMAX, false);
+
+    for(unsigned iPre(0); iPre != preselectedAdd_.size(); ++iPre){
+      AdditionalObjVars& objects(*preselectedAdd_[iPre]);
+      itr = objects.el_matchHLTObj.find(_filter);
+      if(itr == objects.el_matchHLTObj.end())
+        itr = objects.el_matchHLTObj.insert(std::pair<TString, bool*>(_filter, new bool[NMAX])).first;
+      std::fill_n(itr->second, NMAX, false);
+    }
+
+    electronHLTObjects_[_filter] = TriggerObjectCollection();
+  }
+
+  void
+  SimpleEventProducer::addHLTMuonFilter(TString const& _filter)
+  {
+    std::map<TString, bool*>::iterator itr(selectedAdd_.mu_matchHLTObj.find(_filter));
+    if(itr == selectedAdd_.mu_matchHLTObj.end())
+      itr = selectedAdd_.mu_matchHLTObj.insert(std::pair<TString, bool*>(_filter, new bool[NMAX])).first;
+    std::fill_n(itr->second, NMAX, false);
+
+    itr = allAdd_.mu_matchHLTObj.find(_filter);
+    if(itr == allAdd_.mu_matchHLTObj.end())
+      itr = allAdd_.mu_matchHLTObj.insert(std::pair<TString, bool*>(_filter, new bool[NMAX])).first;
+    std::fill_n(itr->second, NMAX, false);
+
+    for(unsigned iPre(0); iPre != preselectedAdd_.size(); ++iPre){
+      AdditionalObjVars& objects(*preselectedAdd_[iPre]);
+      itr = objects.mu_matchHLTObj.find(_filter);
+      if(itr == objects.mu_matchHLTObj.end())
+        itr = objects.mu_matchHLTObj.insert(std::pair<TString, bool*>(_filter, new bool[NMAX])).first;
+      std::fill_n(itr->second, NMAX, false);
+    }
+
+    muonHLTObjects_[_filter] = TriggerObjectCollection();
+  }
+
+  void
+  SimpleEventProducer::addGridParam(TString const& _param)
+  {
+    eventVars_.gridParams[_param] = 0.;
   }
 
   void
@@ -90,11 +166,15 @@ namespace susy {
     bool addJet(_jet != 0);
     bool addVertex(_vtx != 0);
 
-    preselectedObjects_.push_back(new ObjectTree);
-    preselectedAdd_.push_back(new AdditionalObjVars);
+    ObjectTree* objTree(new ObjectTree);
+    AdditionalObjVars* addVars(new AdditionalObjVars);
 
-    preselectedObjects_.back()->setOutput(_tree, addPhoton, addElectron, addMuon, addJet, addVertex);
-    preselectedAdd_.back()->bookBranches(_tree, _isRealData, addPhoton, addElectron, addMuon, addJet);
+    objTree->setOutput(_tree, addPhoton, addElectron, addMuon, addJet, addVertex);
+    addVars->bookBranches(_tree, _isRealData, addPhoton, addElectron, addMuon, addJet);
+
+    preselectedObjects_.push_back(objTree);
+    preselectedAdd_.push_back(addVars);
+
     _tree.SetAutoSave(10000000);
 
     photonPreselection_.push_back(_photon);
@@ -105,18 +185,29 @@ namespace susy {
   }
 
   void
+  SimpleEventProducer::extractTriggerObjects(TriggerEvent& _triggerEvent)
+  {
+    for(std::map<TString, bool>::iterator itr(eventVars_.hltFilterBits.begin()); itr != eventVars_.hltFilterBits.end(); ++itr)
+      itr->second = (_triggerEvent.getFilterObjects(itr->first).size() != 0);
+    for(std::map<TString, TriggerObjectCollection>::iterator itr(photonHLTObjects_.begin()); itr != photonHLTObjects_.end(); ++itr)
+      itr->second = _triggerEvent.getFilterObjects(itr->first);
+    for(std::map<TString, TriggerObjectCollection>::iterator itr(electronHLTObjects_.begin()); itr != electronHLTObjects_.end(); ++itr)
+      itr->second = _triggerEvent.getFilterObjects(itr->first);
+    for(std::map<TString, TriggerObjectCollection>::iterator itr(muonHLTObjects_.begin()); itr != muonHLTObjects_.end(); ++itr)
+      itr->second = _triggerEvent.getFilterObjects(itr->first);
+  }
+
+  void
   SimpleEventProducer::produce(Event const& _event)
   {
-    using namespace susy;
-
     /// MET FILTERS
 
     eventVars_.passMetFilters = _event.passMetFilters(); 
 
     /// TRIGGER BITS
 
-    for(std::map<TString, bool>::iterator bItr(eventVars_.hltBits.begin()); bItr != eventVars_.hltBits.end(); ++bItr)
-      bItr->second = _event.hltMap.pass(bItr->first + "_v*");
+    for(std::map<TString, bool>::iterator itr(eventVars_.hltBits.begin()); itr != eventVars_.hltBits.end(); ++itr)
+      itr->second = _event.hltMap.pass(itr->first + "_v*");
 
     if(saveAll_) allObjects_.initEvent(_event);
     if(saveSelected_) selectedObjects_.initEvent(_event);
@@ -367,6 +458,22 @@ namespace susy {
       else
         dRPFMin = -1.;
 
+      SuperCluster const& sc(*photon.superCluster);
+      TVector3 p3SC(sc.position.Unit());
+      p3SC *= sc.energy;
+      TLorentzVector pSC(p3SC.X(), p3SC.Y(), p3SC.Z(), sc.energy);
+
+      std::map<TString, bool> matchHLTObj;
+      for(std::map<TString, TriggerObjectCollection>::iterator itr(photonHLTObjects_.begin()); itr != photonHLTObjects_.end(); ++itr){
+        double dRCut(0.15);
+        if(itr->first.Index("hltL1s") == 0) dRCut = 0.3;
+        unsigned nO(itr->second.size());
+        unsigned iO(0);
+        for(; iO != nO; ++iO)
+          if(itr->second[iO].deltaR(pSC) < dRCut) break;
+        matchHLTObj[itr->first] = (iO != nO);
+      }
+
       if(isGoodPhoton[iP]){
         if(iMatchedJet != unsigned(-1)) isMatchedJet[iMatchedJet] = true;
         if(!leadingPhoton) leadingPhoton = &photon.momentum;
@@ -382,6 +489,8 @@ namespace susy {
         selectedAdd_.ph_dRPF[iSel] = dRPFMin;
         selectedAdd_.ph_nearestPF[iSel] = pfPdgId;
         selectedAdd_.ph_pfIsPU[iSel] = isPU;
+        for(std::map<TString, bool>::iterator itr(matchHLTObj.begin()); itr != matchHLTObj.end(); ++itr)
+          selectedAdd_.ph_matchHLTObj[itr->first][iSel] = itr->second;
       }
       
       if(saveAll_){
@@ -393,6 +502,8 @@ namespace susy {
         allAdd_.ph_dRPF[iP] = dRPFMin;
         allAdd_.ph_nearestPF[iP] = pfPdgId;
         allAdd_.ph_pfIsPU[iP] = isPU;
+        for(std::map<TString, bool>::iterator itr(matchHLTObj.begin()); itr != matchHLTObj.end(); ++itr)
+          allAdd_.ph_matchHLTObj[itr->first][iP] = itr->second;
       }
 
       for(unsigned iPre(0); iPre != nPre; ++iPre){
@@ -406,6 +517,8 @@ namespace susy {
         preselectedAdd_[iPre]->ph_dRPF[iSel] = dRPFMin;
         preselectedAdd_[iPre]->ph_nearestPF[iSel] = pfPdgId;
         preselectedAdd_[iPre]->ph_pfIsPU[iSel] = isPU;
+        for(std::map<TString, bool>::iterator itr(matchHLTObj.begin()); itr != matchHLTObj.end(); ++itr)
+          preselectedAdd_[iPre]->ph_matchHLTObj[itr->first][iSel] = itr->second;
       }
     }
 
@@ -499,6 +612,17 @@ namespace susy {
       else
         dRPFMin = -1.;
 
+      std::map<TString, bool> matchHLTObj;
+      for(std::map<TString, TriggerObjectCollection>::iterator itr(electronHLTObjects_.begin()); itr != electronHLTObjects_.end(); ++itr){
+        double dRCut(0.15);
+        if(itr->first.Index("hltL1s") == 0) dRCut = 0.3;
+        unsigned nO(itr->second.size());
+        unsigned iO(0);
+        for(; iO != nO; ++iO)
+          if(itr->second[iO].deltaR(electron.momentum) < dRCut) break;
+        matchHLTObj[itr->first] = (iO != nO);
+      }
+
       if(isGoodElectron[iE]){
         if(iMatchedJet != unsigned(-1)) isMatchedJet[iMatchedJet] = true;
         if(!leadingElectron) leadingElectron = &electron.momentum;
@@ -516,6 +640,8 @@ namespace susy {
         selectedAdd_.el_dRPF[iSel] = dRPFMin;
         selectedAdd_.el_nearestPF[iSel] = pfPdgId;
         selectedAdd_.el_pfIsPU[iSel] = isPU;
+        for(std::map<TString, bool>::iterator itr(matchHLTObj.begin()); itr != matchHLTObj.end(); ++itr)
+          selectedAdd_.el_matchHLTObj[itr->first][iSel] = itr->second;
       }
 
       if(saveAll_){
@@ -529,6 +655,8 @@ namespace susy {
         allAdd_.el_dRPF[iE] = dRPFMin;
         allAdd_.el_nearestPF[iE] = pfPdgId;
         allAdd_.el_pfIsPU[iE] = isPU;
+        for(std::map<TString, bool>::iterator itr(matchHLTObj.begin()); itr != matchHLTObj.end(); ++itr)
+          allAdd_.el_matchHLTObj[itr->first][iE] = itr->second;
       }
 
       for(unsigned iPre(0); iPre != nPre; ++iPre){
@@ -544,6 +672,8 @@ namespace susy {
         preselectedAdd_[iPre]->el_dRPF[iSel] = dRPFMin;
         preselectedAdd_[iPre]->el_nearestPF[iSel] = pfPdgId;
         preselectedAdd_[iPre]->el_pfIsPU[iSel] = isPU;
+        for(std::map<TString, bool>::iterator itr(matchHLTObj.begin()); itr != matchHLTObj.end(); ++itr)
+          preselectedAdd_[iPre]->el_matchHLTObj[itr->first][iSel] = itr->second;
       }
     }
 
@@ -637,6 +767,17 @@ namespace susy {
       else
         dRPFMin = -1.;
 
+      std::map<TString, bool> matchHLTObj;
+      for(std::map<TString, TriggerObjectCollection>::iterator itr(muonHLTObjects_.begin()); itr != muonHLTObjects_.end(); ++itr){
+        double dRCut(0.15);
+        if(itr->first.Index("hltL1s") == 0) dRCut = 0.3;
+        unsigned nO(itr->second.size());
+        unsigned iO(0);
+        for(; iO != nO; ++iO)
+          if(itr->second[iO].deltaR(muon.momentum) < dRCut) break;
+        matchHLTObj[itr->first] = (iO != nO);
+      }
+
       if(isGoodMuon[iM]){
         if(iMatchedJet != unsigned(-1)) isMatchedJet[iMatchedJet] = true;
         if(!leadingMuon) leadingMuon = &muon.momentum;
@@ -654,6 +795,8 @@ namespace susy {
         selectedAdd_.mu_dRPF[iSel] = dRPFMin;
         selectedAdd_.mu_nearestPF[iSel] = pfPdgId;
         selectedAdd_.mu_pfIsPU[iSel] = isPU;
+        for(std::map<TString, bool>::iterator itr(matchHLTObj.begin()); itr != matchHLTObj.end(); ++itr)
+          selectedAdd_.mu_matchHLTObj[itr->first][iSel] = itr->second;
       }
 
       if(saveAll_){
@@ -667,6 +810,8 @@ namespace susy {
         allAdd_.mu_dRPF[iM] = dRPFMin;
         allAdd_.mu_nearestPF[iM] = pfPdgId;
         allAdd_.mu_pfIsPU[iM] = isPU;
+        for(std::map<TString, bool>::iterator itr(matchHLTObj.begin()); itr != matchHLTObj.end(); ++itr)
+          allAdd_.mu_matchHLTObj[itr->first][iM] = itr->second;
       }
 
       for(unsigned iPre(0); iPre != nPre; ++iPre){
@@ -682,6 +827,8 @@ namespace susy {
         preselectedAdd_[iPre]->mu_dRPF[iSel] = dRPFMin;
         preselectedAdd_[iPre]->mu_nearestPF[iSel] = pfPdgId;
         preselectedAdd_[iPre]->mu_pfIsPU[iSel] = isPU;
+        for(std::map<TString, bool>::iterator itr(matchHLTObj.begin()); itr != matchHLTObj.end(); ++itr)
+          preselectedAdd_[iPre]->mu_matchHLTObj[itr->first][iSel] = itr->second;
       }
     }
 
@@ -994,11 +1141,12 @@ namespace susy {
     _tree.Branch("mtMuonPhoton", &mtMuonPhoton, "mtMuonPhoton/F");
     _tree.Branch("enuMomentum", &enuMomentum, "enuMomentum/F");
     _tree.Branch("munuMomentum", &munuMomentum, "munuMomentum/F");
-
-    for(std::map<TString, bool>::iterator bItr(hltBits.begin()); bItr != hltBits.end(); ++bItr)
-      _tree.Branch(bItr->first, &bItr->second, bItr->first + "/O");
-    for(std::map<TString, float>::iterator pItr(gridParams.begin()); pItr != gridParams.end(); ++pItr)
-      _tree.Branch(pItr->first, &pItr->second, pItr->first + "/F");
+    for(std::map<TString, bool>::iterator itr(hltBits.begin()); itr != hltBits.end(); ++itr)
+      _tree.Branch(itr->first, &itr->second, itr->first + "/O");
+    for(std::map<TString, bool>::iterator itr(hltFilterBits.begin()); itr != hltFilterBits.end(); ++itr)
+      _tree.Branch(itr->first, &itr->second, itr->first + "/O");
+    for(std::map<TString, float>::iterator itr(gridParams.begin()); itr != gridParams.end(); ++itr)
+      _tree.Branch(itr->first, &itr->second, itr->first + "/F");
 
     _tree.Branch("passMetFilters", &passMetFilters, "passMetFilters/O");
 
@@ -1056,11 +1204,12 @@ namespace susy {
     if(_tree.GetBranch("mtMuonPhoton")) _tree.SetBranchAddress("mtMuonPhoton", &mtMuonPhoton);
     if(_tree.GetBranch("enuMomentum")) _tree.SetBranchAddress("enuMomentum", &enuMomentum);
     if(_tree.GetBranch("munuMomentum")) _tree.SetBranchAddress("munuMomentum", &munuMomentum);
-
-    for(std::map<TString, bool>::iterator bItr(hltBits.begin()); bItr != hltBits.end(); ++bItr)
-      if(_tree.GetBranch(bItr->first)) _tree.SetBranchAddress(bItr->first, &bItr->second);
-    for(std::map<TString, float>::iterator pItr(gridParams.begin()); pItr != gridParams.end(); ++pItr)
-      if(_tree.GetBranch(pItr->first)) _tree.SetBranchAddress(pItr->first, &pItr->second);
+    for(std::map<TString, bool>::iterator itr(hltBits.begin()); itr != hltBits.end(); ++itr)
+      if(_tree.GetBranch(itr->first)) _tree.SetBranchAddress(itr->first, &itr->second);
+    for(std::map<TString, bool>::iterator itr(hltFilterBits.begin()); itr != hltFilterBits.end(); ++itr)
+      if(_tree.GetBranch(itr->first)) _tree.SetBranchAddress(itr->first, &itr->second);
+    for(std::map<TString, float>::iterator itr(gridParams.begin()); itr != gridParams.end(); ++itr)
+      if(_tree.GetBranch(itr->first)) _tree.SetBranchAddress(itr->first, &itr->second);
 
     if(_tree.GetBranch("passMetFilters")) _tree.SetBranchAddress("passMetFilters", &passMetFilters);
 
@@ -1115,6 +1264,9 @@ namespace susy {
       _tree.Branch("photon.dRPF", ph_dRPF, "dRPF[photon.size]/F");
       _tree.Branch("photon.nearestPF", ph_nearestPF, "nearestPF[photon.size]/S");
       _tree.Branch("photon.pfIsPU", ph_pfIsPU, "pfIsPU[photon.size]/O");
+
+      for(std::map<TString, bool*>::iterator itr(ph_matchHLTObj.begin()); itr != ph_matchHLTObj.end(); ++itr)
+        _tree.Branch("photon." + itr->first, itr->second, itr->first + "[photon.size]/O");
     }
     if(_bookElectron){
       if(!_isRealData){
@@ -1129,6 +1281,9 @@ namespace susy {
       _tree.Branch("electron.dRPF", el_dRPF, "dRPF[electron.size]/F");
       _tree.Branch("electron.nearestPF", el_nearestPF, "nearestPF[electron.size]/S");
       _tree.Branch("electron.pfIsPU", el_pfIsPU, "pfIsPU[electron.size]/O");
+
+      for(std::map<TString, bool*>::iterator itr(el_matchHLTObj.begin()); itr != el_matchHLTObj.end(); ++itr)
+        _tree.Branch("electron." + itr->first, itr->second, itr->first + "[electron.size]/O");
     }
     if(_bookMuon){
       if(!_isRealData){
@@ -1143,6 +1298,9 @@ namespace susy {
       _tree.Branch("muon.dRPF", mu_dRPF, "dRPF[muon.size]/F");
       _tree.Branch("muon.nearestPF", mu_nearestPF, "nearestPF[muon.size]/S");
       _tree.Branch("muon.pfIsPU", mu_pfIsPU, "pfIsPU[muon.size]/O");
+
+      for(std::map<TString, bool*>::iterator itr(mu_matchHLTObj.begin()); itr != mu_matchHLTObj.end(); ++itr)
+        _tree.Branch("muon." + itr->first, itr->second, itr->first + "[muon.size]/O");
     }
     if(_bookJet){
       if(!_isRealData){
@@ -1164,6 +1322,8 @@ namespace susy {
     if(_tree.GetBranch("photon.dRPF")) _tree.SetBranchAddress("photon.dRPF", ph_dRPF);
     if(_tree.GetBranch("photon.nearestPF")) _tree.SetBranchAddress("photon.nearestPF", ph_nearestPF);
     if(_tree.GetBranch("photon.pfIsPU")) _tree.SetBranchAddress("photon.pfIsPU", ph_pfIsPU);
+    for(std::map<TString, bool*>::iterator itr(ph_matchHLTObj.begin()); itr != ph_matchHLTObj.end(); ++itr)
+      if(_tree.GetBranch("photon." + itr->first)) _tree.SetBranchAddress("photon." + itr->first, itr->second);
 
     if(_tree.GetBranch("electron.dRGen")) _tree.SetBranchAddress("electron.dRGen", el_dRGen);
     if(_tree.GetBranch("electron.genIso")) _tree.SetBranchAddress("electron.genIso", el_genIso);
@@ -1175,6 +1335,8 @@ namespace susy {
     if(_tree.GetBranch("electron.dRPF")) _tree.SetBranchAddress("electron.dRPF", el_dRPF);
     if(_tree.GetBranch("electron.nearestPF")) _tree.SetBranchAddress("electron.nearestPF", el_nearestPF);
     if(_tree.GetBranch("electron.pfIsPU")) _tree.SetBranchAddress("electron.pfIsPU", el_pfIsPU);
+    for(std::map<TString, bool*>::iterator itr(el_matchHLTObj.begin()); itr != el_matchHLTObj.end(); ++itr)
+      if(_tree.GetBranch("electron." + itr->first)) _tree.SetBranchAddress("electron." + itr->first, itr->second);
 
     if(_tree.GetBranch("muon.dRGen")) _tree.SetBranchAddress("muon.dRGen", mu_dRGen);
     if(_tree.GetBranch("muon.genIso")) _tree.SetBranchAddress("muon.genIso", mu_genIso);
@@ -1186,11 +1348,22 @@ namespace susy {
     if(_tree.GetBranch("muon.dRPF")) _tree.SetBranchAddress("muon.dRPF", mu_dRPF);
     if(_tree.GetBranch("muon.nearestPF")) _tree.SetBranchAddress("muon.nearestPF", mu_nearestPF);
     if(_tree.GetBranch("muon.pfIsPU")) _tree.SetBranchAddress("muon.pfIsPU", mu_pfIsPU);
+    for(std::map<TString, bool*>::iterator itr(mu_matchHLTObj.begin()); itr != mu_matchHLTObj.end(); ++itr)
+      if(_tree.GetBranch("muon." + itr->first)) _tree.SetBranchAddress("muon." + itr->first, itr->second);
 
     if(_tree.GetBranch("jet.dRGen")) _tree.SetBranchAddress("jet.dRGen", jt_dRGen);
     if(_tree.GetBranch("jet.genSumPt")) _tree.SetBranchAddress("jet.genSumPt", jt_genSumPt);
     if(_tree.GetBranch("jet.nearestGen")) _tree.SetBranchAddress("jet.nearestGen", jt_nearestGen);
   }
 
+  SimpleEventProducer::AdditionalObjVars::~AdditionalObjVars()
+  {
+    for(std::map<TString, bool*>::iterator itr(ph_matchHLTObj.begin()); itr != ph_matchHLTObj.end(); ++itr)
+      delete[] itr->second;
+    for(std::map<TString, bool*>::iterator itr(el_matchHLTObj.begin()); itr != el_matchHLTObj.end(); ++itr)
+      delete[] itr->second;
+    for(std::map<TString, bool*>::iterator itr(mu_matchHLTObj.begin()); itr != mu_matchHLTObj.end(); ++itr)
+      delete[] itr->second;
+  }
 }
 
