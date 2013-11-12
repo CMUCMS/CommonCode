@@ -1,5 +1,5 @@
 ### MODIFY THE FOLLOWING LINE FOR YOUR SETUP ###
-SUSYNTUPLIZER=$(CMSSW_BASE)/src/SusyAnalysis/SusyNtuplizer/src
+SUSYNTUPLIZER=$(CMSSW_BASE)/src/SUSYPhotonAnalysis/SusyNtuplizer/src
 ################################################
 
 TARGET = libCMUCommon.so
@@ -9,7 +9,7 @@ STANDALONEOBJECTS = $(patsubst %.cc,%.o,$(STANDALONESRCFILES))
 OBJECTS = $(STANDALONEOBJECTS) $(patsubst %.cc,%.o,$(RA3SRCFILES))
 
 CFLAGS = -c -O3 -Wall -fPIC
-LFLAGS = -shared -Wl
+LFLAGS = -shared
 
 INC = -I. -I$(shell root-config --incdir)
 SUSYINC = -I$(SUSYNTUPLIZER)

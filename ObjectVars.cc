@@ -109,6 +109,7 @@ namespace susy {
     combRelSubdetIso(0.),
     combRelIso(0.),
     iSubdet(0),
+    dpTpT(0.),
     nMatchedStations(0),
     nLayersWithMmt(0),
     nValidMuonHits(0),
@@ -533,6 +534,8 @@ namespace susy {
     combRelSubdetIso = (_mu.ecalIsoR03 + _mu.hcalIsoR03 + _mu.trackIsoR03) / pt; 
 
     combRelIso = (_mu.sumChargedHadronPt04 + std::max(0., _mu.sumNeutralHadronEt04 + _mu.sumPhotonEt04 - 0.5 * _mu.sumPUPt04)) / pt;
+
+    if(hasBestTrack == 1) dpTpT = (bestTrack->ptError)/ pt;
 
     isLoose = ObjectSelector::isGoodMuon(*this, MuLoose12);
     isTight = ObjectSelector::isGoodMuon(*this, MuTight12);

@@ -73,6 +73,7 @@ namespace susy {
     MuDz,
     MuValidPixelHits,
     MuCombIso,
+    MudpTpT,
     nMuonCriteria
   };
   enum JetCriteria {

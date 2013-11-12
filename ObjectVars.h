@@ -126,6 +126,7 @@ namespace susy {
     float combRelSubdetIso;
     float combRelIso;
     short iSubdet;
+    float dpTpT;
     unsigned char nMatchedStations;
     unsigned char nLayersWithMmt;
     unsigned char nValidMuonHits;
