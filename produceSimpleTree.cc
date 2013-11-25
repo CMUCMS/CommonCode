@@ -100,11 +100,13 @@ SimpleTreeProducer::initialize(char const* _outputDir, TString const& _puScenari
     /* DEFINE LIST OF MC PARAMETERS TO INCLUDE */
     eventProducer_.addGridParam("ptHat");
 
-    TFile* puWeightSource(TFile::Open(TString(gSystem->DirName(__FILE__)) + "/puReweighting_2012.root"));
-    if(!puWeightSource || puWeightSource->IsZombie() || !(puWeights = dynamic_cast<TH1*>(puWeightSource->Get("weight" + _puScenario)))){
-      std::cerr << "PU weights for scenario " << _puScenario << " not found" << std::endl;
-      if(throw_) throw std::invalid_argument("PU weights");
-      else return false;
+    if(_puScenario != "None"){
+      TFile* puWeightSource(TFile::Open(TString(gSystem->DirName(__FILE__)) + "/puReweighting_2012.root"));
+      if(!puWeightSource || puWeightSource->IsZombie() || !(puWeights = dynamic_cast<TH1*>(puWeightSource->Get("weight" + _puScenario)))){
+        std::cerr << "PU weights for scenario " << _puScenario << " not found" << std::endl;
+        if(throw_) throw std::invalid_argument("PU weights");
+        else return false;
+      }
     }
   }
   else{

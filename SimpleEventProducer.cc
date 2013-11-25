@@ -74,7 +74,7 @@ namespace susy {
     else
       saveAll_ = false;
 
-    if(!isRealData){
+    if(!isRealData && _puWeights->GetSumOfWeights() != 0.){
       puWeights_ = static_cast<TH1*>(_puWeights->Clone("SimpleEventPU"));
       puWeights_->SetDirectory(0);
     }
@@ -224,8 +224,7 @@ namespace susy {
 
     /// PU WEIGHT
     
-    if(!_event.isRealData){
-      if(!puWeights_) throw Exception(Exception::kEventAnomaly, "PU weights not set");
+    if(!_event.isRealData && puWeights_){
       unsigned iPU(0);
       for(; iPU != _event.pu.size(); ++iPU){
         if(_event.pu[iPU].BX != 0) continue;
