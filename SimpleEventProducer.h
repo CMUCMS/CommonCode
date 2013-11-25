@@ -12,12 +12,16 @@
 
 #include "TTree.h"
 #include "TString.h"
+#include "TH1.h"
 
 namespace susy {
 
   class SimpleEventProducer {
   public:
     struct EventVars {
+      unsigned runNumber;
+      unsigned lumiNumber;
+      unsigned eventNumber;
       float met;
       float metPhi;
       float ht;
@@ -66,6 +70,7 @@ namespace susy {
       float pf_pz[NMAX];
       float pf_energy[NMAX];
       bool passMetFilters;
+      float puWeight;
       std::map<TString, bool> hltBits;
       std::map<TString, bool> hltFilterBits;
       std::map<TString, float> gridParams;
@@ -120,7 +125,7 @@ namespace susy {
     SimpleEventProducer();
     ~SimpleEventProducer();
 
-    void initialize(TTree*, TTree*, TTree*, bool);
+    void initialize(TTree*, TTree*, TTree*, TH1 const*);
 
     void extractTriggerObjects(TriggerEvent&);
     void produce(Event const&);
@@ -176,6 +181,8 @@ namespace susy {
     std::map<TString, TriggerObjectCollection> photonHLTObjects_;
     std::map<TString, TriggerObjectCollection> electronHLTObjects_;
     std::map<TString, TriggerObjectCollection> muonHLTObjects_;
+
+    TH1* puWeights_;
   };
 
 }

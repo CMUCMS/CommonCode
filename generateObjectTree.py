@@ -109,7 +109,7 @@ for i in range(len(objects)):
         headerContent += ');'
 
 headerContent += '''
-    void initEvent(Event const&);
+    void initEvent();
     void fill() { output_->Fill(); }'''
 
 for obj in objects:
@@ -144,9 +144,6 @@ for obj in objects:
     ''' + obj + '''VarsArray ''' + lowerName + '''Array_;'''
 
 headerContent += '''
-    unsigned runNumber_;
-    unsigned lumiNumber_;
-    unsigned eventNumber_;
 
     TTree* output_;
     bool ownOutput_;
@@ -353,9 +350,6 @@ objTreeContent = '''/* Auto-generated source file */
 #include "TFile.h"
 
 #include <iostream>
-#ifndef STANDALONE
-#include "SusyEvent.h"
-#endif
 
 namespace susy {
 '''
@@ -376,9 +370,6 @@ for obj in objects:
     ''' + lowerName + '''Array_(),'''
 
 objTreeContent += '''
-    runNumber_(0),
-    lumiNumber_(0),
-    eventNumber_(0),
     output_(0),
     ownOutput_(false)
   {
@@ -443,11 +434,7 @@ for obj in objects:
     objTreeContent += ', bool _set' + obj + '/* = true*/'
 
 objTreeContent += ''')
-  {
-    _input.SetBranchStatus("runNumber", 1);
-    _input.SetBranchStatus("luminosityBlockNumber", 1);
-    _input.SetBranchStatus("eventNumber", 1);
-'''
+  {'''
 
 for obj in objects:
     objTreeContent += '''
@@ -456,21 +443,9 @@ for obj in objects:
 objTreeContent += '''
   }
 
-#ifdef STANDALONE
   void
-  ObjectTree::initEvent(Event const&)
-  {
-    runNumber_ = 0;
-    lumiNumber_ = 0;
-    eventNumber_ = 0;
-#else
-  void
-  ObjectTree::initEvent(Event const& _event)
-  {
-    runNumber_ = _event.runNumber;
-    lumiNumber_ = _event.luminosityBlockNumber;
-    eventNumber_ = _event.eventNumber;
-#endif'''
+  ObjectTree::initEvent()
+  {'''
 
 for obj in objects:
     objTreeContent += '''
@@ -487,11 +462,7 @@ for obj in objects:
 
 objTreeContent = objTreeContent.rstrip(', ') + ')'
 objTreeContent += '''
-  {
-    output_->Branch("runNumber", &runNumber_, "runNumber/i");
-    output_->Branch("lumiNumber", &lumiNumber_, "lumiNumber/i");
-    output_->Branch("eventNumber", &eventNumber_, "eventNumber/i");
-'''
+  {'''
 
 for obj in objects:
     objTreeContent += '''

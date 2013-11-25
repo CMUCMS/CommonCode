@@ -216,7 +216,7 @@ namespace susy {
     void setOutput(TString const&, bool = true, bool = true, bool = true, bool = true, bool = true);
     void setOutput(TTree&, bool = true, bool = true, bool = true, bool = true, bool = true);
     static void setBranchStatus(TTree&, bool = true, bool = true, bool = true, bool = true, bool = true);
-    void initEvent(Event const&);
+    void initEvent();
     void fill() { output_->Fill(); }
     void save(PhotonVars const& _vars) { photonArray_.push_back(_vars); }
     void save(ElectronVars const& _vars) { electronArray_.push_back(_vars); }
@@ -240,9 +240,6 @@ namespace susy {
     MuonVarsArray muonArray_;
     JetVarsArray jetArray_;
     VertexVarsArray vertexArray_;
-    unsigned runNumber_;
-    unsigned lumiNumber_;
-    unsigned eventNumber_;
 
     TTree* output_;
     bool ownOutput_;

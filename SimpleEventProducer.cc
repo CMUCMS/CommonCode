@@ -31,7 +31,11 @@ namespace susy {
     electronPreselection_(0),
     muonPreselection_(0),
     jetPreselection_(0),
-    vtxPreselection_(0)
+    vtxPreselection_(0),
+    photonHLTObjects_(),
+    electronHLTObjects_(),
+    muonHLTObjects_(),
+    puWeights_(0)
   {
   }
 
@@ -41,18 +45,22 @@ namespace susy {
       delete preselectedAdd_[iPre];
       delete preselectedObjects_[iPre];
     }
+
+    delete puWeights_;
   }
 
   void
-  SimpleEventProducer::initialize(TTree* _evtTree, TTree* _selectedObjTree, TTree* _allObjTree, bool _isRealData)
+  SimpleEventProducer::initialize(TTree* _evtTree, TTree* _selectedObjTree, TTree* _allObjTree, TH1 const* _puWeights)
   {
-    eventVars_.bookBranches(*_evtTree, _isRealData, savePF_);
+    bool isRealData(_puWeights == 0);
+
+    eventVars_.bookBranches(*_evtTree, isRealData, savePF_);
 
     if(_selectedObjTree){
       saveSelected_ = true;
 
       selectedObjects_.setOutput(*_selectedObjTree);
-      selectedAdd_.bookBranches(*_selectedObjTree, _isRealData);
+      selectedAdd_.bookBranches(*_selectedObjTree, isRealData);
     }
     else
       saveSelected_ = false;
@@ -61,10 +69,15 @@ namespace susy {
       saveAll_ = true;
 
       allObjects_.setOutput(*_allObjTree);
-      allAdd_.bookBranches(*_allObjTree, _isRealData);
+      allAdd_.bookBranches(*_allObjTree, isRealData);
     }
     else
       saveAll_ = false;
+
+    if(!isRealData){
+      puWeights_ = static_cast<TH1*>(_puWeights->Clone("SimpleEventPU"));
+      puWeights_->SetDirectory(0);
+    }
   }
 
   void
@@ -209,12 +222,34 @@ namespace susy {
     for(std::map<TString, bool>::iterator itr(eventVars_.hltBits.begin()); itr != eventVars_.hltBits.end(); ++itr)
       itr->second = _event.hltMap.pass(itr->first + "_v*");
 
-    if(saveAll_) allObjects_.initEvent(_event);
-    if(saveSelected_) selectedObjects_.initEvent(_event);
+    /// PU WEIGHT
+    
+    if(!_event.isRealData){
+      if(!puWeights_) throw Exception(Exception::kEventAnomaly, "PU weights not set");
+      unsigned iPU(0);
+      for(; iPU != _event.pu.size(); ++iPU){
+        if(_event.pu[iPU].BX != 0) continue;
+        eventVars_.puWeight = puWeights_->GetBinContent(puWeights_->FindFixBin(_event.pu[iPU].trueNumInteractions));
+        break;
+      }
+      if(iPU == _event.pu.size()) throw Exception(Exception::kEventAnomaly, "No PU information for on-time BX found");
+    }
 
+    /// EVENT NUMBERS
+
+    eventVars_.runNumber = _event.runNumber;
+    eventVars_.lumiNumber = _event.luminosityBlockNumber;
+    eventVars_.eventNumber = _event.eventNumber;
+
+    /// INITIALIZE COLLECTIONS
+
+    if(saveAll_) allObjects_.initEvent();
+    if(saveSelected_) selectedObjects_.initEvent();
     unsigned nPre(preselectedObjects_.size());
     for(unsigned iPre(0); iPre != nPre; ++iPre)
-      preselectedObjects_[iPre]->initEvent(_event);
+      preselectedObjects_[iPre]->initEvent();
+
+    /// START FILLING BRANCHES
 
     PhotonCollection const& photonsSource(_event.photons.find("photons")->second);
     ElectronCollection const& electronsSource(_event.electrons.find("gsfElectrons")->second);
@@ -1131,6 +1166,10 @@ namespace susy {
   void
   SimpleEventProducer::EventVars::bookBranches(TTree& _tree, bool _isRealData, bool _savePF)
   {
+    _tree.Branch("runNumber", &runNumber, "runNumber/i");
+    _tree.Branch("lumiNumber", &lumiNumber, "lumiNumber/i");
+    _tree.Branch("eventNumber", &eventNumber, "eventNumber/i");
+
     _tree.Branch("met", &met, "met/F");
     _tree.Branch("metPhi", &metPhi, "metPhi/F");
     _tree.Branch("mht", &mht, "mht/F");
@@ -1188,12 +1227,18 @@ namespace susy {
       _tree.Branch("gen.py", gen_py, "py[gen.size]/F");
       _tree.Branch("gen.pz", gen_pz, "pz[gen.size]/F");
       _tree.Branch("gen.energy", gen_energy, "energy[gen.size]/F");
+
+      _tree.Branch("puWeight", &puWeight, "puWeight/F");
     }
   }
 
   void
   SimpleEventProducer::EventVars::setAddress(TTree& _tree)
   {
+    if(_tree.GetBranch("runNumber")) _tree.SetBranchAddress("runNumber", &runNumber);
+    if(_tree.GetBranch("lumiNumber")) _tree.SetBranchAddress("lumiNumber", &lumiNumber);
+    if(_tree.GetBranch("eventNumber")) _tree.SetBranchAddress("eventNumber", &eventNumber);
+
     if(_tree.GetBranch("met")) _tree.SetBranchAddress("met", &met);
     if(_tree.GetBranch("metPhi")) _tree.SetBranchAddress("metPhi", &metPhi);
     if(_tree.GetBranch("mht")) _tree.SetBranchAddress("mht", &mht);
@@ -1248,6 +1293,8 @@ namespace susy {
     if(_tree.GetBranch("gen.py")) _tree.SetBranchAddress("gen.py", gen_py);
     if(_tree.GetBranch("gen.pz")) _tree.SetBranchAddress("gen.pz", gen_pz);
     if(_tree.GetBranch("gen.energy")) _tree.SetBranchAddress("gen.energy", gen_energy);
+
+    if(_tree.GetBranch("puWeight")) _tree.SetBranchAddress("puWeight", &puWeight);
   }
 
   void
@@ -1366,4 +1413,3 @@ namespace susy {
       delete[] itr->second;
   }
 }
-

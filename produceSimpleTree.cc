@@ -7,14 +7,14 @@
 
 #include "TFile.h"
 #include "TChain.h"
-#include "TBranch.h"
-#include "TLeaf.h"
+#include "TH1.h"
+#include "TSystem.h"
 
 class SimpleTreeProducer {
 public:
   SimpleTreeProducer();
   ~SimpleTreeProducer() {}
-  bool initialize(char const*, bool = true, bool = true, bool = false, bool = false);
+  bool initialize(char const*, TString const& = "", bool = true, bool = true, bool = false, bool = false);
   bool run(char const*);
   bool finalize();
   void setThrow(bool _val) { throw_ = _val; }
@@ -24,7 +24,6 @@ private:
   TTree* selectedObjTree_;
   TTree* allObjTree_;
   susy::SimpleEventProducer eventProducer_;
-  bool producerInitialized_;
   bool fillTriggerEvent_;
   bool throw_;
 };
@@ -35,14 +34,13 @@ SimpleTreeProducer::SimpleTreeProducer() :
   selectedObjTree_(0),
   allObjTree_(0),
   eventProducer_(),
-  producerInitialized_(false),
   fillTriggerEvent_(false),
   throw_(false)
 {
 }
 
 bool
-SimpleTreeProducer::initialize(char const* _outputDir, bool _fillSelected, bool _fillAll, bool _fillPF, bool _fillTriggerEvent)
+SimpleTreeProducer::initialize(char const* _outputDir, TString const& _puScenario/* = ""*/, bool _fillSelected/* = true*/, bool _fillAll/* = true*/, bool _fillPF/* = false*/, bool _fillTriggerEvent/* = false*/)
 {
   /* DEFINE OUTPUT TREES */
 
@@ -94,6 +92,29 @@ SimpleTreeProducer::initialize(char const* _outputDir, bool _fillSelected, bool 
   eventProducer_.setMuonId(susy::MuTight12);
   eventProducer_.setJetId(susy::JtLoose);
 
+  TH1* puWeights(0);
+
+  if(_puScenario.Length() > 0){
+    std::cout << "Running in MC mode with PU scenario " << _puScenario << std::endl;
+
+    /* DEFINE LIST OF MC PARAMETERS TO INCLUDE */
+    eventProducer_.addGridParam("ptHat");
+
+    TFile* puWeightSource(TFile::Open(TString(gSystem->DirName(__FILE__)) + "/puReweighting_2012.root"));
+    if(!puWeightSource || puWeightSource->IsZombie() || !(puWeights = dynamic_cast<TH1*>(puWeightSource->Get("weight" + _puScenario)))){
+      std::cerr << "PU weights for scenario " << _puScenario << " not found" << std::endl;
+      if(throw_) throw std::invalid_argument("PU weights");
+      else return false;
+    }
+  }
+  else{
+    std::cout << "Running in real-data mode as no PU scenario was specified." << std::endl;
+    std::cout << "If this is a MC sample, check the dataset name and rerun the function with a valid scenario name (e.g. S10, PU50)." << std::endl;
+  }
+
+  /* INITIALIZE EVENT PRODUCER */
+  eventProducer_.initialize(evtTree_, selectedObjTree_, allObjTree_, puWeights);
+
   return true;
 }
 
@@ -120,16 +141,6 @@ SimpleTreeProducer::run(char const* _sourcePath)
   TChain triggerInput("triggerEventTree");
   if(susyTriggerPath.Length() != 0) triggerInput.Add(susyTriggerPath);
 
-  TBranch* bIsRealData(input.GetBranch("isRealData"));
-  TLeaf* lIsRealData(0);
-  if(!bIsRealData || !(lIsRealData = bIsRealData->GetLeaf("isRealData"))){
-    std::cerr << "Input does not contain the branch isRealData" << std::endl;
-    if(throw_) throw std::invalid_argument("Input");
-    else return false;
-  }
-  bIsRealData->GetEntry(0);
-  bool isRealData(lIsRealData->GetValue(0) != 0);
-
   /* DISABLE UNUSED INPUT BRANCHES TO SPEED UP THE PROCESSING */
 
   input.SetBranchStatus("*", 0);
@@ -140,12 +151,11 @@ SimpleTreeProducer::run(char const* _sourcePath)
   input.SetBranchStatus("hlt*", 1);
   input.SetBranchStatus("pfParticles*", 1);
   input.SetBranchStatus("met_pfType01CorrectedMet*", 1);
-  if(!isRealData){
-    input.SetBranchStatus("genParticles*", 1);
-    input.SetBranchStatus("met_genMetTrue*", 1);
-    input.SetBranchStatus("gridParams*", 1);
-  }
   input.SetBranchStatus("beamSpot*", 1);
+  if(input.GetBranch("pu")) input.SetBranchStatus("pu*", 1);
+  if(input.GetBranch("genParticles")) input.SetBranchStatus("genParticles*", 1);
+  if(input.GetBranch("met_genMetTrue.")) input.SetBranchStatus("met_genMetTrue*", 1);
+  if(input.GetBranch("gridParams_ptHat")) input.SetBranchStatus("gridParams*", 1);
   susy::ObjectTree::setBranchStatus(input); // set status = 1 for photon-, electron-, muon-, jet-, and vertex-related branches
 
   /* SET INPUT BRANCH ADDRESS TO EVENT OBJECT */
@@ -167,23 +177,6 @@ SimpleTreeProducer::run(char const* _sourcePath)
     delete outputFile_;
     if(throw_) throw std::runtime_error("IOError");
     else return false;
-  }
-
-  /* ONE-TIME CONFIGURATION OF THE PRODUCER */
-  if(!producerInitialized_){
-    /* DEFINE LIST OF MC PARAMETERS TO INCLUDE */
-
-    if(!isRealData){
-      TObjArray* leaves(input.GetListOfLeaves());
-      for(int iL(0); iL != leaves->GetEntries(); ++iL){
-        TString name(leaves->At(iL)->GetName());
-        if(name.Index("gridParams_") == 0) eventProducer_.addGridParam(name);
-      }
-    }
-
-    /* INITIALIZE EVENT PRODUCER */
-    eventProducer_.initialize(evtTree_, selectedObjTree_, allObjTree_, isRealData);
-    producerInitialized_ = true;
   }
 
   /* EVENT LOOP */
@@ -262,34 +255,34 @@ SimpleTreeProducer::finalize()
 }
 
 void
-produceSimpleTree(TString const& _sourceName, TString const& _outputName, bool _fillSelected = true, bool _fillAll = true, bool _fillPF = false, bool _fillTriggerEvent = false)
+produceSimpleTree(TString const& _sourceName, TString const& _outputName, TString const& _puScenario = "", bool _fillSelected = true, bool _fillAll = true, bool _fillPF = false, bool _fillTriggerEvent = false)
 {
   SimpleTreeProducer producer;
   producer.setThrow(true);
-  producer.initialize(_outputName, _fillSelected, _fillAll, _fillPF, _fillTriggerEvent) &&
+  producer.initialize(_outputName, _puScenario, _fillSelected, _fillAll, _fillPF, _fillTriggerEvent) &&
     producer.run(_sourceName) &&
     producer.finalize();
 }
 
 void
-produceSimpleTree(bool _fillSelected, bool _fillAll, bool _fillPF, bool _fillTriggerEvent, TObjArray* _urls, TObjArray* _outputName)
+produceSimpleTree(TString const& _puScenario, bool _fillSelected, bool _fillAll, bool _fillPF, bool _fillTriggerEvent, TObjArray* _urls, TObjArray* _outputName)
 {
   SimpleTreeProducer producer;
   producer.setThrow(true);
-  if(!producer.initialize(_outputName->At(0)->GetName(), _fillSelected, _fillAll, _fillPF, _fillTriggerEvent)) return;
+  if(!producer.initialize(_outputName->At(0)->GetName(), _puScenario, _fillSelected, _fillAll, _fillPF, _fillTriggerEvent)) return;
   for(int iS(0); iS != _urls->GetEntries(); ++iS)
     if(!producer.run(_urls->At(iS)->GetName())) return;
   producer.finalize();
 }
 
 void
-produceSimpleTree(TObjArray* _urls, TObjArray* _outputName)
+produceSimpleTree(TString const& _puScenario, TObjArray* _urls, TObjArray* _outputName)
 {
-  produceSimpleTree(true, true, true, false, _urls, _outputName);
+  produceSimpleTree(_puScenario, true, true, true, false, _urls, _outputName);
 }
 
 void
-produceSimpleTree(bool _fillSelected, bool _fillAll, bool _fillPF, bool _fillTriggerEvent, TString const& _dataset, TObjArray* _inputLines, TObjArray* _outputDir)
+produceSimpleTree(TString const& _puScenario, bool _fillSelected, bool _fillAll, bool _fillPF, bool _fillTriggerEvent, TString const& _dataset, TObjArray* _inputLines, TObjArray* _outputDir)
 {
   // For "externalList" mode of dcmu job scheduler
   // The list must have the grid point name in the (N+1)n-th rows (N=files per point, n=0,1,...) and the file names in the folloing N rows
@@ -315,12 +308,12 @@ produceSimpleTree(bool _fillSelected, bool _fillAll, bool _fillPF, bool _fillTri
   for(int iL(1); iL != _inputLines->GetEntries(); ++iL)
     urls.Add(new TObjString(_dataset + "/" + _inputLines->At(iL)->GetName()));
 
-  produceSimpleTree(_fillSelected, _fillAll, _fillPF, _fillTriggerEvent, &urls, &outputName);
+  produceSimpleTree(_puScenario, _fillSelected, _fillAll, _fillPF, _fillTriggerEvent, &urls, &outputName);
 }
 
 
 void
-produceSimpleTree(TString const& _dataset, TObjArray* _inputLines, TObjArray* _outputDir)
+produceSimpleTree(TString const& _puScenario, TString const& _dataset, TObjArray* _inputLines, TObjArray* _outputDir)
 {
-  produceSimpleTree(true, true, true, false, _dataset, _inputLines, _outputDir);
+  produceSimpleTree(_puScenario, true, true, true, false, _dataset, _inputLines, _outputDir);
 }

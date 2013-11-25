@@ -5,9 +5,6 @@
 #include "TFile.h"
 
 #include <iostream>
-#ifndef STANDALONE
-#include "SusyEvent.h"
-#endif
 
 namespace susy {
 
@@ -833,9 +830,6 @@ namespace susy {
     muonArray_(),
     jetArray_(),
     vertexArray_(),
-    runNumber_(0),
-    lumiNumber_(0),
-    eventNumber_(0),
     output_(0),
     ownOutput_(false)
   {
@@ -874,10 +868,6 @@ namespace susy {
   void
   ObjectTree::setBranchStatus(TTree& _input, bool _setPhoton/* = true*/, bool _setElectron/* = true*/, bool _setMuon/* = true*/, bool _setJet/* = true*/, bool _setVertex/* = true*/)
   {
-    _input.SetBranchStatus("runNumber", 1);
-    _input.SetBranchStatus("luminosityBlockNumber", 1);
-    _input.SetBranchStatus("eventNumber", 1);
-
     if(_setPhoton) PhotonVars::setBranchStatus(_input);
     if(_setElectron) ElectronVars::setBranchStatus(_input);
     if(_setMuon) MuonVars::setBranchStatus(_input);
@@ -885,21 +875,9 @@ namespace susy {
     if(_setVertex) VertexVars::setBranchStatus(_input);
   }
 
-#ifdef STANDALONE
   void
-  ObjectTree::initEvent(Event const&)
+  ObjectTree::initEvent()
   {
-    runNumber_ = 0;
-    lumiNumber_ = 0;
-    eventNumber_ = 0;
-#else
-  void
-  ObjectTree::initEvent(Event const& _event)
-  {
-    runNumber_ = _event.runNumber;
-    lumiNumber_ = _event.luminosityBlockNumber;
-    eventNumber_ = _event.eventNumber;
-#endif
     photonArray_.clear();
     electronArray_.clear();
     muonArray_.clear();
@@ -910,10 +888,6 @@ namespace susy {
   void
   ObjectTree::setBranches_(bool _setPhoton, bool _setElectron, bool _setMuon, bool _setJet, bool _setVertex)
   {
-    output_->Branch("runNumber", &runNumber_, "runNumber/i");
-    output_->Branch("lumiNumber", &lumiNumber_, "lumiNumber/i");
-    output_->Branch("eventNumber", &eventNumber_, "eventNumber/i");
-
     if(_setPhoton) photonArray_.setBranches(*output_);
     if(_setElectron) electronArray_.setBranches(*output_);
     if(_setMuon) muonArray_.setBranches(*output_);

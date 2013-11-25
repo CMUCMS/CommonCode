@@ -21,7 +21,9 @@ version of the SUSYNtuplizer package:
 
 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 $ cd CMSSW_5_3_8_patch3/src
-$ cvs co -r cms538_v1 -d SusyAnalysis/SusyNtuplizer UserCode/LPCPJM/SusyAnalysis/SusyNtuplizer
+$ git clone -b master https://github.com/CMSSUSYPhotons/SUSYPhotonAnalysis.git
+$ cd CMSSUSYPhotons git checkout cms538_v1
+$ cd ../
 $ (add other packages)
 $ scram b -j8
 $ cmsenv
@@ -56,13 +58,13 @@ $ make
 Check out the latest SusyNtuplizer package to a local directory:
 
 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-$ cvs co -r cms538_v1 -d SusyAnalysis/SusyNtuplizer UserCode/LPCPJM/SusyAnalysis/SusyNtuplizer
+$ git clone -b master https://github.com/CMSSUSYPhotons/SUSYPhotonAnalysis.git
 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 Compile the library:
 
 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-$ cd SusyNtuplizer/macro
+$ cd SUSYPhotonAnalysis/SusyNtuplizer/macro
 $ make
 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -173,7 +175,14 @@ The third tree, eventVars, contain variables such as trigger results and missing
 does not depend on the specific object selection.
 
 [produceSimpleTree.cc]
-A function that produces "mini-ntuples" from SUSYNtuples.
+Defines a function that produces "mini-ntuples" from SUSYNtuples. The function is invoked
+with the following arguments:
+Input (RA3) file name, Output (mini) file name, PU scenario name, flag to fill selected
+objects, flag to fill all objects, flag to fill PF information, flag to fill trigger
+events (if available in RA3). Passing a non-empty PU scenario name will trigger the
+function to run in "MC" mode. In other words, if running over MC samples, a correct
+PU scenario name (e.g. S10, PU50) must be given. If running over real data on the other
+hand, this argument must be an empty string.
 
 [getLumiList.cc]
 A function that dumps the list of luminosity blocks in a given dataset into JSON format.
@@ -181,6 +190,12 @@ A function that dumps the list of luminosity blocks in a given dataset into JSON
 [genDecayFilter.cc]
 A function that skims the MC events by their decay chain. Requires an additional package in
 github.com/yiiyama/Toolset.git
+
+[puReweighting_2012.root] S
+A ROOT file that contains the reweighting factor that mathces the MC to the full 2012 PU
+distribution. Weights should be stored as a TH1 object with name weight[PUName] where
+PUName is the PU scenario name. Details of each PU distribution are found in the twiki
+PdmVPileUpDescription.
 
 ===============
 ==== USAGE ====
