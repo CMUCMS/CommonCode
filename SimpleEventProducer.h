@@ -16,6 +16,9 @@
 
 namespace susy {
 
+  unsigned const NMAXGEN(2048);
+  unsigned const NMAXPF(256);
+
   class SimpleEventProducer {
   public:
     struct EventVars {
@@ -38,37 +41,38 @@ namespace susy {
       float mtMuonPhoton;
       float enuMomentum;
       float munuMomentum;
+      float rho;
       unsigned gen_size;
-      unsigned short gen_status[NMAX];
-      short gen_charge[NMAX];
-      short gen_motherIndex[NMAX];
-      int gen_pdgId[NMAX];
-      float gen_vx[NMAX];
-      float gen_vy[NMAX];
-      float gen_vz[NMAX];
-      float gen_pt[NMAX];
-      float gen_eta[NMAX];
-      float gen_phi[NMAX];
-      float gen_mass[NMAX];
-      float gen_px[NMAX];
-      float gen_py[NMAX];
-      float gen_pz[NMAX];
-      float gen_energy[NMAX];
+      unsigned short gen_status[NMAXGEN];
+      short gen_charge[NMAXGEN];
+      short gen_motherIndex[NMAXGEN];
+      int gen_pdgId[NMAXGEN];
+      float gen_vx[NMAXGEN];
+      float gen_vy[NMAXGEN];
+      float gen_vz[NMAXGEN];
+      float gen_pt[NMAXGEN];
+      float gen_eta[NMAXGEN];
+      float gen_phi[NMAXGEN];
+      float gen_mass[NMAXGEN];
+      float gen_px[NMAXGEN];
+      float gen_py[NMAXGEN];
+      float gen_pz[NMAXGEN];
+      float gen_energy[NMAXGEN];
       unsigned pf_size;
-      short pf_charge[NMAX];
-      bool pf_isPU[NMAX];
-      short pf_pdgId[NMAX];
-      float pf_vx[NMAX];
-      float pf_vy[NMAX];
-      float pf_vz[NMAX];
-      float pf_pt[NMAX];
-      float pf_eta[NMAX];
-      float pf_phi[NMAX];
-      float pf_mass[NMAX];
-      float pf_px[NMAX];
-      float pf_py[NMAX];
-      float pf_pz[NMAX];
-      float pf_energy[NMAX];
+      short pf_charge[NMAXPF];
+      bool pf_isPU[NMAXPF];
+      short pf_pdgId[NMAXPF];
+      float pf_vx[NMAXPF];
+      float pf_vy[NMAXPF];
+      float pf_vz[NMAXPF];
+      float pf_pt[NMAXPF];
+      float pf_eta[NMAXPF];
+      float pf_phi[NMAXPF];
+      float pf_mass[NMAXPF];
+      float pf_px[NMAXPF];
+      float pf_py[NMAXPF];
+      float pf_pz[NMAXPF];
+      float pf_energy[NMAXPF];
       bool passMetFilters;
       float puWeight;
       std::map<TString, bool> hltBits;
@@ -116,6 +120,7 @@ namespace susy {
       std::map<TString, bool*> el_matchHLTObj;
       std::map<TString, bool*> mu_matchHLTObj;
 
+      void setHLTObjFilters(unsigned, std::map<TString, TriggerObjectCollection> const&);
       void bookBranches(TTree&, bool, bool = true, bool = true, bool = true, bool = true);
       void setAddress(TTree&);
 
@@ -130,14 +135,14 @@ namespace susy {
     void extractTriggerObjects(TriggerEvent&);
     void produce(Event const&);
 
-    void addHLTPath(TString const&);
-    void addHLTEventFilter(TString const&);
-    void addHLTPhotonFilter(TString const&);
-    void addHLTElectronFilter(TString const&);
-    void addHLTMuonFilter(TString const&);
-    void addGridParam(TString const&);
+    void addHLTPath(TString const& _path) { eventVars_.hltBits[_path] = false; }
+    void addHLTEventFilter(TString const& _filter) { eventVars_.hltFilterBits[_filter] = false; }
+    void addHLTPhotonFilter(TString const& _filter) { photonHLTObjects_[_filter]; }
+    void addHLTElectronFilter(TString const& _filter) { electronHLTObjects_[_filter]; }
+    void addHLTMuonFilter(TString const& _filter) { muonHLTObjects_[_filter]; }
+    void addGridParam(TString const& _param) { eventVars_.gridParams[_param] = 0.; }
 
-    void addPreselected(TTree&, bool, std::vector<unsigned> const*, std::vector<unsigned> const*, std::vector<unsigned> const*, std::vector<unsigned> const*, std::vector<unsigned> const*);
+    void addPreselected(TTree&, std::vector<unsigned> const*, std::vector<unsigned> const*, std::vector<unsigned> const*, std::vector<unsigned> const*, std::vector<unsigned> const*);
 
     void setSavePF(bool _val) { savePF_ = _val; }
 
@@ -146,25 +151,31 @@ namespace susy {
     void setMuonId(MuonId _id) { muonId_ = _id; }
     void setJetId(JetId _id) { jetId_ = _id; }
 
-    ObjectTree const& getSelectedObjects() const { return selectedObjects_; }
-    ObjectTree const& getAllObjects() const { return allObjects_; }
-    ObjectTree const& getPreselectedObjects(unsigned _iPre) const { return *preselectedObjects_.at(_iPre); }
-    AdditionalObjVars const& getSelectedAdd() const { return selectedAdd_; }
-    AdditionalObjVars const& getAllAdd() const { return allAdd_; }
-    AdditionalObjVars const& getPreselectedAdd(unsigned _iPre) const { return *preselectedAdd_.at(_iPre); }
+    std::vector<const Photon*> sortPhotons(PhotonCollection const&, std::vector<unsigned>* = 0) const;
+    std::vector<const Electron*> sortElectrons(ElectronCollection const&, std::vector<unsigned>* = 0) const;
+    std::vector<const Muon*> sortMuons(MuonCollection const&, std::vector<unsigned>* = 0) const;
+    std::vector<const PFJet*> sortJets(PFJetCollection const&, std::vector<unsigned>* = 0) const;
+
+    ObjectTree const* getSelectedObjects() const { return selectedObjects_; }
+    ObjectTree const* getAllObjects() const { return allObjects_; }
+    ObjectTree const* getPreselectedObjects(unsigned _iPre) const { return preselectedObjects_.at(_iPre); }
+    AdditionalObjVars const* getSelectedAdd() const { return selectedAdd_; }
+    AdditionalObjVars const* getAllAdd() const { return allAdd_; }
+    AdditionalObjVars const* getPreselectedAdd(unsigned _iPre) const { return preselectedAdd_.at(_iPre); }
+
+    bool isMC() const { return puWeights_ != 0; }
 
   private:
     EventVars eventVars_;
-    AdditionalObjVars selectedAdd_;
-    AdditionalObjVars allAdd_;
-    ObjectTree selectedObjects_;
-    ObjectTree allObjects_;
+    AdditionalObjVars* selectedAdd_;
+    AdditionalObjVars* allAdd_;
+    ObjectTree* selectedObjects_;
+    ObjectTree* allObjects_;
 
     std::vector<AdditionalObjVars*> preselectedAdd_;
     std::vector<ObjectTree*> preselectedObjects_;
 
-    bool saveSelected_;
-    bool saveAll_;
+    bool isRealData_;
     bool savePF_;
 
     PhotonId photonId_;

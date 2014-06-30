@@ -100,6 +100,7 @@ namespace susy {
     unsigned char nPixelHits;
     unsigned char nMissingHits;
     bool passConversionVeto;
+    bool isEcalDriven;
     bool isVeto;
     bool isLoose;
     bool isMedium;
@@ -155,11 +156,16 @@ namespace susy {
     float pz;
     float energy;
     float jecScale;
+    float jecUncert;
     float chFraction;
     float nhFraction;
     float ceFraction;
     float neFraction;
+    float quarkLikelihood;
+    float gluonLikelihood;
     short iSubdet;
+    short algoFlavor;
+    short physFlavor;
     unsigned char nConstituents;
     unsigned char nCharged;
     bool passPUJetIdLoose;

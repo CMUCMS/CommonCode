@@ -8,7 +8,7 @@ objectVars = file('ObjectVars.h')
 
 classPat = re.compile('^[ ]*class[ ]+([a-zA-Z0-9]+)Vars[ ]*{')
 cTorPat = re.compile('^[ ]*[a-zA-Z0-9]+Vars\([^,]+(,[ ]+Event.*|)\);')
-varPat = re.compile('^[ ]*((?:unsigned[ ]|)(?:bool|char|short|int|unsigned|long|float|double))[ ]+([a-zA-Z_][a-zA-Z0-9_]*);')
+varPat = re.compile('^[ ]*((?:unsigned[ ]|signed[ ]|)(?:bool|char|short|int|unsigned|long|float|double))[ ]+([a-zA-Z_][a-zA-Z0-9_]*);')
 
 useEvent = dict()
 varList = dict()
@@ -204,6 +204,8 @@ for obj in objects:
     _tree.Branch("''' + lowerName + '.' + name + '", ' + name + ', "' + name + '[' + lowerName + '.size]/'
         if type == 'char':
             branch += 'B'
+        elif type == 'signed char':
+            branch += 'B'
         elif type == 'unsigned char':
             branch += 'b'
         elif type == 'short':
@@ -243,8 +245,8 @@ for obj in objects:
     for (type, name) in varList[obj]:
         bName = lowerName + '.' + name
         setAddressText += '''
-    if(_tree.GetBranch("''' + bName + '")) _tree.SetBranchAddress("' + bName + '", ' + name + ''');
-    else notFound.push_back("''' + bName + '");'
+    if(_tree.GetBranchStatus("''' + bName + '")) _tree.SetBranchAddress("' + bName + '", ' + name + ''');
+    else if(!_tree.GetBranch("''' + bName + '''")) notFound.push_back("''' + bName + '");'
 
     setAddressText += '''
     

@@ -88,6 +88,7 @@ namespace susy {
     nPixelHits(0),
     nMissingHits(0),
     passConversionVeto(false),
+    isEcalDriven(false),
     isVeto(false),
     isLoose(false),
     isMedium(false),
@@ -133,11 +134,16 @@ namespace susy {
     pz(0.),
     energy(0.),
     jecScale(0.),
+    jecUncert(0.),
     chFraction(0.),
     nhFraction(0.),
     ceFraction(0.),
     neFraction(0.),
+    quarkLikelihood(0.),
+    gluonLikelihood(0.),
     iSubdet(0),
+    algoFlavor(0),
+    physFlavor(0),
     nConstituents(0),
     nCharged(0),
     passPUJetIdLoose(false),
@@ -169,24 +175,9 @@ namespace susy {
   void
   photonEffectiveAreas(double _eta, double* _effA)
   {
-    double& effATrk(_effA[0]);
-    double& effAEcal(_effA[1]);
-    double& effAHcal(_effA[2]);
-
-    if(_eta < etaGapBegin){
-      effATrk = 0.167;
-      effAEcal = 0.183;
-      effAHcal = 0.062;
-    }
-    else{
-      effATrk = 0.032;
-      effAEcal = 0.090;
-      effAHcal = 0.180;
-    }
-
-    double& effACH(_effA[3]);
-    double& effANH(_effA[4]);
-    double& effAPh(_effA[5]);
+    double& effACH(_effA[0]);
+    double& effANH(_effA[1]);
+    double& effAPh(_effA[2]);
 
     // CutBasedPhotonID2012
     if(_eta < 1.){
@@ -245,18 +236,11 @@ namespace susy {
 
     hOverE = _ph.hadTowOverEm;
 
-    double effA[6]; // tracker, ecal, hcal, chargedHadron, neutralHadron, photon
-    photonEffectiveAreas(absEta, effA);
+    trackerIso = _ph.trkSumPtHollowConeDR03 - 0.002 * pt;
 
-    // CutBasedPhotonID2012#Effective_Areas_for_rho_correcti
-    // "For 52X: double_kt6PFJets_rho_RECO"
-    double rho(_event.rho);
+    ecalIso = _ph.ecalRecHitSumEtConeDR03 - 0.012 * pt;
 
-    trackerIso = _ph.trkSumPtHollowConeDR04 - rho * effA[0] - 0.001 * pt;
-
-    ecalIso = _ph.ecalRecHitSumEtConeDR04 - rho * effA[1] - 0.006 * pt;
-
-    hcalIso = _ph.hcalDepth1TowerSumEtConeDR03 + _ph.hcalDepth2TowerSumEtConeDR03 - rho * effA[2] - 0.0025 * pt;
+    hcalIso = _ph.hcalDepth1TowerSumEtConeDR03 + _ph.hcalDepth2TowerSumEtConeDR03 - 0.005 * pt;
 
     sigmaIetaIeta = _ph.sigmaIetaIeta;
 
@@ -281,11 +265,16 @@ namespace susy {
 
     phiWidth = sc.phiWidth;
 
-    chargedHadronIso = _ph.chargedHadronIso - rho * effA[3];
+    double effA[3]; // chargedHadron, neutralHadron, photon
+    photonEffectiveAreas(absEta, effA);
+ 
+    double rho(_event.rho);
 
-    neutralHadronIso = _ph.neutralHadronIso - rho * effA[4] - 0.04 * pt;
+    chargedHadronIso = _ph.chargedHadronIso - rho * effA[0];
 
-    photonIso = _ph.photonIso - rho * effA[5] - 0.005 * pt;
+    neutralHadronIso = _ph.neutralHadronIso - rho * effA[1] - 0.04 * pt;
+
+    photonIso = _ph.photonIso - rho * effA[2] - 0.005 * pt;
 
     nPixelSeeds = _ph.nPixelSeeds;
 
@@ -446,6 +435,8 @@ namespace susy {
 
     nMissingHits = _el.nMissingHits;
 
+    isEcalDriven = _el.ecalDriven();
+
     passConversionVeto = _el.passConversionVeto;
 
     isVeto = ObjectSelector::isGoodElectron(*this, ElVeto12);
@@ -485,9 +476,8 @@ namespace susy {
 
     double absEta(std::abs(eta));
 
-    if(absEta < etaGapBegin) iSubdet = 0;
-    else if(absEta < etaGapEnd) iSubdet = -1;
-    else if(absEta < etaMax) iSubdet = 1;
+    if(absEta < 1.2) iSubdet = 0;
+    else if(absEta < 2.4) iSubdet = 1;
     else iSubdet = -1;
 
     isGlobalMuon = _mu.isGlobalMuon();
@@ -562,6 +552,7 @@ namespace susy {
   JetVars::set(PFJet const& _jet, Event const& _event)
   {
     jecScale = _jet.jecScaleFactors.find("L1FastL2L3")->second;
+    jecUncert = _jet.jecUncertainty;
 
     TLorentzVector corrP(_jet.momentum * jecScale);
 
@@ -586,19 +577,29 @@ namespace susy {
     else if(absEta < etaMax) iSubdet = 1;
     else iSubdet = -1;
 
-    chFraction = _jet.chargedHadronEnergy / energy;
+    double rawE(_jet.momentum.E());
 
-    nhFraction = _jet.neutralHadronEnergy / energy;
+    chFraction = _jet.chargedHadronEnergy / rawE;
 
-    ceFraction = _jet.chargedEmEnergy / energy;
+    nhFraction = _jet.neutralHadronEnergy / rawE;
 
-    neFraction = _jet.neutralEmEnergy / energy;
+    ceFraction = _jet.chargedEmEnergy / rawE;
+
+    neFraction = _jet.neutralEmEnergy / rawE;
 
     nConstituents = _jet.nConstituents;
 
     nCharged = _jet.chargedMultiplicity;
 
+    algoFlavor = _jet.algDefFlavour;
+
+    physFlavor = _jet.phyDefFlavour;
+
     passPUJetIdLoose = _jet.passPuJetIdLoose(kPUJetIdFull);
+
+    quarkLikelihood = _jet.qgDiscriminators[kQuarkLikelihood];
+
+    gluonLikelihood = _jet.qgDiscriminators[kGluonMLP];
 
     isLoose = ObjectSelector::isGoodJet(*this, JtLoose);
   }

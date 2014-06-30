@@ -1,6 +1,9 @@
 #ifndef Utilities_h
 #define Utilities_h
 
+#include "ObjectTree.h"
+#include "SimpleEventProducer.h"
+
 #include <map>
 #include <set>
 #include <vector>
@@ -43,6 +46,8 @@ namespace susy {
   }
 
   TString particleName(int, bool = false);
+
+  void genMatch(SimpleEventProducer::EventVars const&, PhotonVarsArray const*, ElectronVarsArray const*, MuonVarsArray const*, unsigned*, unsigned*, unsigned*, double* = 0);
 
   class GoodLumis {
   public:

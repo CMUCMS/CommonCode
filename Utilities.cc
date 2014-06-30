@@ -1,7 +1,5 @@
 #include "Utilities.h"
 
-#include "ObjectVars.h"
-
 #include <iostream>
 #include <fstream>
 #include <cmath>
@@ -135,6 +133,88 @@ namespace susy {
     else if(charge == 1 || charge == -1) name += "^{#pm}";
 
     return name;
+  }
+
+  void
+  genMatch(SimpleEventProducer::EventVars const& _eventVars, PhotonVarsArray const* _photons, ElectronVarsArray const* _electrons, MuonVarsArray const* _muons, unsigned* ph_match, unsigned* el_match, unsigned* mu_match, double* _genIso/* = 0*/)
+  {
+    if(ph_match) std::fill_n(ph_match, susy::NMAX, -1);
+    if(el_match) std::fill_n(el_match, susy::NMAX, -1);
+    if(mu_match) std::fill_n(mu_match, susy::NMAX, -1);
+    if(_genIso) std::fill_n(_genIso, susy::NMAXGEN, -1.);
+
+    for(unsigned iG(0); iG != _eventVars.gen_size; ++iG){
+      if(_eventVars.gen_status[iG] != 1) continue;
+
+      unsigned absId(std::abs(_eventVars.gen_pdgId[iG]));
+      if(absId != 22 && absId != 11 && absId != 13) continue;
+
+      short mIdx(_eventVars.gen_motherIndex[iG]);
+      if(mIdx < 0 || std::abs(_eventVars.gen_pdgId[mIdx]) > 99) continue;
+
+      bool matched(false);
+
+      if((absId == 22 || absId == 11) && _photons && ph_match){
+        TVector3 pGen(_eventVars.gen_px[iG], _eventVars.gen_py[iG], _eventVars.gen_pz[iG]);
+
+        for(unsigned iP(0); iP != _photons->size; ++iP){
+          if(ph_match[iP] < _eventVars.gen_size && std::abs(_eventVars.gen_pdgId[ph_match[iP]]) == 11) continue;
+          TVector3 dir(_photons->caloX[iP] - _eventVars.gen_vx[iG], _photons->caloY[iP] - _eventVars.gen_vy[iG], _photons->caloZ[iP] - _eventVars.gen_vz[iG]);
+          if(dir.DeltaR(pGen) < 0.1){
+            ph_match[iP] = iG;
+            matched = true;
+          }
+        }
+      }
+
+      if((absId == 11 && _electrons && el_match) || (absId == 13 && _muons && mu_match)){
+        short idx(_eventVars.gen_motherIndex[iG]);
+        while(idx != -1 && _eventVars.gen_pdgId[idx] != 23 && std::abs(_eventVars.gen_pdgId[idx]) != 24) idx = _eventVars.gen_motherIndex[idx];
+        if(idx != -1){
+          unsigned* match(0);
+          unsigned size(0);
+          float const* eta(0);
+          float const* phi(0);
+          if(absId == 11){
+            match = el_match;
+            size = _electrons->size;
+            eta = _electrons->eta;
+            phi = _electrons->phi;
+          }
+          else{
+            match = mu_match;
+            size = _muons->size;
+            eta = _muons->eta;
+            phi = _muons->phi;
+          }
+        
+          TVector3 pGen(_eventVars.gen_px[iG], _eventVars.gen_py[iG], _eventVars.gen_pz[iG]);
+          double genEta(pGen.Eta());
+          double genPhi(pGen.Phi());
+          
+          for(unsigned iL(0); iL != size; ++iL){
+            if(match[iL] < _eventVars.gen_size) continue;
+            if(deltaR(eta[iL], phi[iL], genEta, genPhi) < 0.05){
+              match[iL] = iG;
+              matched = true;
+            }
+          }
+        }
+      }
+
+      if(matched && _genIso){
+        double iso(0.);
+        for(unsigned iIso(0); iIso != _eventVars.gen_size; ++iIso){
+          if(iIso == iG) continue;
+          if(_eventVars.gen_status[iIso] != 1) continue;
+          unsigned idIso(std::abs(_eventVars.gen_pdgId[iIso]));
+          if(idIso == 12 || idIso == 14 || idIso == 16 || idIso == 1000022 || idIso == 1000039) continue;
+          if(deltaR(_eventVars.gen_eta[iIso], _eventVars.gen_phi[iIso], _eventVars.gen_eta[iG], _eventVars.gen_phi[iG]) < 0.3)
+            iso += _eventVars.gen_pt[iIso];
+        }
+        _genIso[iG] = iso;
+      }
+    }
   }
 
   GoodLumis::GoodLumis() :
