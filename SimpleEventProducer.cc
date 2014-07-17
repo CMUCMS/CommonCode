@@ -595,6 +595,9 @@ namespace susy {
       else
         dRPFMin = -1.;
 
+      SuperCluster const& sc(*electron.superCluster);
+      TLorentzVector pSC(sc.position, 0.); // only used for direction calculation
+
       std::map<TString, bool> matchHLTObj;
       for(std::map<TString, TriggerObjectCollection>::iterator itr(electronHLTObjects_.begin()); itr != electronHLTObjects_.end(); ++itr){
         double dRCut(0.15);
@@ -602,7 +605,7 @@ namespace susy {
         unsigned nO(itr->second.size());
         unsigned iO(0);
         for(; iO != nO; ++iO)
-          if(itr->second[iO].deltaR(electron.momentum) < dRCut) break;
+          if(itr->second[iO].deltaR(pSC) < dRCut) break;
         matchHLTObj[itr->first] = (iO != nO);
       }
 
