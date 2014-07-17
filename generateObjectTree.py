@@ -1,6 +1,82 @@
 import re
 import os
 
+def setBranchFunc(obj, lowerName, varList, isArray):
+    text = '  void\n  ' + obj + 'Vars'
+    if isArray: text += 'Array'
+    text += '''::setBranches(TTree& _tree)
+  {
+'''
+
+    if isArray:
+        text += '    _tree.Branch("''' + lowerName + '.size", &size, "' + lowerName + '.size/i");\n\n'
+
+    for (type, name) in varList[obj]:
+        branch = '    _tree.Branch("' + lowerName + '.' + name + '", '
+        if not isArray: branch += '&'
+        branch += name + ', "' + name
+        if isArray: branch += '[' + lowerName + '.size]'
+        branch += '/'
+
+        if type == 'char':
+            branch += 'B'
+        elif type == 'signed char':
+            branch += 'B'
+        elif type == 'unsigned char':
+            branch += 'b'
+        elif type == 'short':
+            branch += 'S'
+        elif type == 'unsigned short':
+            branch += 's'
+        elif type == 'int':
+            branch += 'I'
+        elif type == 'unsigned' or type == 'unsigned int':
+            branch += 'i'
+        elif type == 'long':
+            branch += 'L'
+        elif type == 'unsigned long':
+            branch += 'l'
+        elif type == 'float':
+            branch += 'F'
+        elif type == 'double':
+            branch += 'D'
+        elif type == 'bool':
+            branch += 'O'
+
+        branch += '");\n'
+        text += branch
+
+    text += '  }\n\n'
+
+    return text
+
+def setAddressFunc(obj, lowerName, varList, isArray):
+    text = '  void\n  ' + obj + 'Vars'
+    if isArray: text += 'Array'
+    text += '''::setAddress(TTree& _tree)
+  {
+    std::vector<TString> notFound;
+'''
+    
+    if isArray:
+        text += '    _tree.SetBranchAddress("' + lowerName + '.size", &size);\n\n'
+
+    for (type, name) in varList[obj]:
+        bName = lowerName + '.' + name
+        text += '    if(_tree.GetBranchStatus("' + bName + '")) _tree.SetBranchAddress("' + bName + '", '
+        if not isArray: text += '&'
+        text += name + ');\n'
+        text += '    else if(!_tree.GetBranch("' + bName + '")) notFound.push_back("' + bName + '");\n'
+
+    text += '''
+    for(unsigned iN(0); iN != notFound.size(); ++iN)
+      std::cerr << "Branch " << notFound[iN] << " not found in input" << std::endl;
+  }
+
+'''
+
+    return text
+
 objects = ['Photon', 'Electron', 'Muon', 'Jet', 'Vertex']
 susyObjects = {'Photon': 'Photon', 'Electron': 'Electron', 'Muon': 'Muon', 'Jet': 'PFJet', 'Vertex': 'Vertex'}
 
@@ -161,14 +237,10 @@ headerFile.close()
 # GENERATE SRC
 
 cTors = dict()
-setBranches = dict()
-setAddress = dict()
 pushBack = dict()
 at = dict()
 
 for obj in objects:
-    lowerName = obj.lower()
-
     cTorText = '''
   ''' + obj + 'Vars::' + obj + '''Vars() :'''
 
@@ -192,69 +264,6 @@ for obj in objects:
   }
 '''
     cTors[obj] = cTorText
-
-    setBranchText = '''
-  void
-  ''' + obj + '''VarsArray::setBranches(TTree& _tree)
-  {
-    _tree.Branch("''' + lowerName + '.size", &size, "' + lowerName + '.size/i");'
-
-    for (type, name) in varList[obj]:
-        branch = '''
-    _tree.Branch("''' + lowerName + '.' + name + '", ' + name + ', "' + name + '[' + lowerName + '.size]/'
-        if type == 'char':
-            branch += 'B'
-        elif type == 'signed char':
-            branch += 'B'
-        elif type == 'unsigned char':
-            branch += 'b'
-        elif type == 'short':
-            branch += 'S'
-        elif type == 'unsigned short':
-            branch += 's'
-        elif type == 'int':
-            branch += 'I'
-        elif type == 'unsigned' or type == 'unsigned int':
-            branch += 'i'
-        elif type == 'long':
-            branch += 'L'
-        elif type == 'unsigned long':
-            branch += 'l'
-        elif type == 'float':
-            branch += 'F'
-        elif type == 'double':
-            branch += 'D'
-        elif type == 'bool':
-            branch += 'O'
-
-        branch += '");'
-        setBranchText += branch
-
-    setBranchText += '''
-  }
-'''
-    setBranches[obj] = setBranchText
-
-    setAddressText = '''
-  void
-  ''' + obj + '''VarsArray::setAddress(TTree& _tree)
-  {
-    std::vector<TString> notFound;
-    _tree.SetBranchAddress("''' + lowerName + '.size", &size);'
-
-    for (type, name) in varList[obj]:
-        bName = lowerName + '.' + name
-        setAddressText += '''
-    if(_tree.GetBranchStatus("''' + bName + '")) _tree.SetBranchAddress("' + bName + '", ' + name + ''');
-    else if(!_tree.GetBranch("''' + bName + '''")) notFound.push_back("''' + bName + '");'
-
-    setAddressText += '''
-    
-    for(unsigned iN(0); iN != notFound.size(); ++iN)
-      std::cerr << "Branch " << notFound[iN] << " not found in input" << std::endl;
-  }
-'''
-    setAddress[obj] = setAddressText
 
     pushBackText = '''
   void
@@ -357,8 +366,8 @@ namespace susy {
 '''
 
 for obj in objects:
-    objTreeContent += setBranches[obj]
-    objTreeContent += setAddress[obj]
+    objTreeContent += setBranchFunc(obj, obj.lower(), varList, True)
+    objTreeContent += setAddressFunc(obj, obj.lower(), varList, True)
     objTreeContent += pushBack[obj]
     objTreeContent += at[obj]
 
@@ -489,6 +498,8 @@ objVarsContent = '''/* Partially auto-generated source file - edit where indicat
 
 for obj in objects:
     objVarsContent += cTors[obj]
+    objVarsContent += setBranchFunc(obj, obj.lower(), varList, False)
+    objVarsContent += setAddressFunc(obj, obj.lower(), varList, False)
 
 objVarsContent += '\n'
 objVarsContent += userDef
