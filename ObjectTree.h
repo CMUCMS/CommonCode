@@ -64,6 +64,7 @@ namespace susy {
     bool isTightLV[NMAX];
   };
 
+
   class ElectronVarsArray {
   public:
     ElectronVarsArray() : size(0) {}
@@ -116,6 +117,7 @@ namespace susy {
     bool isTight[NMAX];
   };
 
+
   class MuonVarsArray {
   public:
     MuonVarsArray() : size(0) {}
@@ -155,6 +157,7 @@ namespace susy {
     bool isTight[NMAX];
   };
 
+
   class JetVarsArray {
   public:
     JetVarsArray() : size(0) {}
@@ -191,6 +194,7 @@ namespace susy {
     bool isLoose[NMAX];
   };
 
+
   class VertexVarsArray {
   public:
     VertexVarsArray() : size(0) {}
@@ -213,6 +217,7 @@ namespace susy {
     unsigned short nTracks[NMAX];
     bool isGood[NMAX];
   };
+
 
   class ObjectTree {
   public:    

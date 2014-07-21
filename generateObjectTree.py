@@ -147,6 +147,7 @@ for obj in objects:
 
     headerContent += '''
   };
+
 '''
 
 headerContent += '''
@@ -241,8 +242,7 @@ pushBack = dict()
 at = dict()
 
 for obj in objects:
-    cTorText = '''
-  ''' + obj + 'Vars::' + obj + '''Vars() :'''
+    cTorText = '  ' + obj + 'Vars::' + obj + '''Vars() :'''
 
     initList = ''
     for (type, name) in varList[obj]:
@@ -262,11 +262,11 @@ for obj in objects:
     cTorText += '''
   {
   }
+
 '''
     cTors[obj] = cTorText
 
-    pushBackText = '''
-  void
+    pushBackText = '''  void
   ''' + obj + 'VarsArray::push_back(' + obj + '''Vars const& _vars)
   {
     if(size == NMAX - 1)
@@ -280,11 +280,11 @@ for obj in objects:
     pushBackText += '''
     ++size;
   }
+
 '''
     pushBack[obj] = pushBackText
 
-    atText = '''
-  ''' + obj + '''Vars
+    atText = '  ' + obj + '''Vars
   ''' + obj + '''VarsArray::at(unsigned _pos) const
   {
     if(_pos >= size)
@@ -300,6 +300,7 @@ for obj in objects:
     atText += '''
     return vars;
   }
+
 '''
 
     at[obj] = atText
@@ -348,6 +349,7 @@ except:
   ''' + obj + '''Vars::setBranchStatus(TTree&)
   {
   }
+
 '''
 
     userDef += '/* END USER-DEFINED IMPLEMENTATION (DO NOT MODIFY THIS LINE) */\n'
@@ -363,6 +365,7 @@ objTreeContent = '''/* Auto-generated source file */
 #include <iostream>
 
 namespace susy {
+
 '''
 
 for obj in objects:
@@ -372,7 +375,6 @@ for obj in objects:
     objTreeContent += at[obj]
 
 objTreeContent += '''
-
   ObjectTree::ObjectTree() :'''
 
 for obj in objects:
@@ -481,6 +483,7 @@ for obj in objects:
 
 objTreeContent += '''
   }
+
 '''
 
 objTreeContent += '}\n'
@@ -494,6 +497,7 @@ objTreeFile.close()
 objVarsContent = '''/* Partially auto-generated source file - edit where indicated */
 /* Add necessary inclusions below */
 ''' + preamble + '''namespace susy {
+
 '''
 
 for obj in objects:

@@ -16,6 +16,8 @@ namespace susy {
   public:
     PhotonVars();
     PhotonVars(Photon const& _ph, Event const& _ev) { set(_ph, _ev); }
+    void setBranches(TTree&);
+    void setAddress(TTree&);
     void set(Photon const&, Event const&);
     static void setBranchStatus(TTree&);
 
@@ -64,6 +66,8 @@ namespace susy {
   public:
     ElectronVars();
     ElectronVars(Electron const& _el, Event const& _ev) { set(_el, _ev); }
+    void setBranches(TTree&);
+    void setAddress(TTree&);
     void set(Electron const&, Event const&);
     static void setBranchStatus(TTree&);
 
@@ -111,6 +115,8 @@ namespace susy {
   public:
     MuonVars();
     MuonVars(Muon const& _mu, Event const& _ev) { set(_mu, _ev); }
+    void setBranches(TTree&);
+    void setAddress(TTree&);
     void set(Muon const&, Event const&);
     static void setBranchStatus(TTree&);
 
@@ -145,6 +151,8 @@ namespace susy {
   public:
     JetVars();
     JetVars(PFJet const& _jt, Event const& _ev) { set(_jt, _ev); }
+    void setBranches(TTree&);
+    void setAddress(TTree&);
     void set(PFJet const&, Event const&);
     static void setBranchStatus(TTree&);
 
@@ -176,6 +184,8 @@ namespace susy {
   public:
     VertexVars();
     VertexVars(Vertex const& _vtx) { set(_vtx); }
+    void setBranches(TTree&);
+    void setAddress(TTree&);
     void set(Vertex const&);
     static void setBranchStatus(TTree&);
 

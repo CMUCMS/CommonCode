@@ -12,6 +12,7 @@ namespace susy {
   PhotonVarsArray::setBranches(TTree& _tree)
   {
     _tree.Branch("photon.size", &size, "photon.size/i");
+
     _tree.Branch("photon.pt", pt, "pt[photon.size]/F");
     _tree.Branch("photon.eta", eta, "eta[photon.size]/F");
     _tree.Branch("photon.phi", phi, "phi[photon.size]/F");
@@ -58,6 +59,7 @@ namespace susy {
   {
     std::vector<TString> notFound;
     _tree.SetBranchAddress("photon.size", &size);
+
     if(_tree.GetBranchStatus("photon.pt")) _tree.SetBranchAddress("photon.pt", pt);
     else if(!_tree.GetBranch("photon.pt")) notFound.push_back("photon.pt");
     if(_tree.GetBranchStatus("photon.eta")) _tree.SetBranchAddress("photon.eta", eta);
@@ -136,7 +138,7 @@ namespace susy {
     else if(!_tree.GetBranch("photon.isMediumLV")) notFound.push_back("photon.isMediumLV");
     if(_tree.GetBranchStatus("photon.isTightLV")) _tree.SetBranchAddress("photon.isTightLV", isTightLV);
     else if(!_tree.GetBranch("photon.isTightLV")) notFound.push_back("photon.isTightLV");
-    
+
     for(unsigned iN(0); iN != notFound.size(); ++iN)
       std::cerr << "Branch " << notFound[iN] << " not found in input" << std::endl;
   }
@@ -243,6 +245,7 @@ namespace susy {
   ElectronVarsArray::setBranches(TTree& _tree)
   {
     _tree.Branch("electron.size", &size, "electron.size/i");
+
     _tree.Branch("electron.pt", pt, "pt[electron.size]/F");
     _tree.Branch("electron.eta", eta, "eta[electron.size]/F");
     _tree.Branch("electron.phi", phi, "phi[electron.size]/F");
@@ -288,6 +291,7 @@ namespace susy {
   {
     std::vector<TString> notFound;
     _tree.SetBranchAddress("electron.size", &size);
+
     if(_tree.GetBranchStatus("electron.pt")) _tree.SetBranchAddress("electron.pt", pt);
     else if(!_tree.GetBranch("electron.pt")) notFound.push_back("electron.pt");
     if(_tree.GetBranchStatus("electron.eta")) _tree.SetBranchAddress("electron.eta", eta);
@@ -364,7 +368,7 @@ namespace susy {
     else if(!_tree.GetBranch("electron.isMedium")) notFound.push_back("electron.isMedium");
     if(_tree.GetBranchStatus("electron.isTight")) _tree.SetBranchAddress("electron.isTight", isTight);
     else if(!_tree.GetBranch("electron.isTight")) notFound.push_back("electron.isTight");
-    
+
     for(unsigned iN(0); iN != notFound.size(); ++iN)
       std::cerr << "Branch " << notFound[iN] << " not found in input" << std::endl;
   }
@@ -469,6 +473,7 @@ namespace susy {
   MuonVarsArray::setBranches(TTree& _tree)
   {
     _tree.Branch("muon.size", &size, "muon.size/i");
+
     _tree.Branch("muon.pt", pt, "pt[muon.size]/F");
     _tree.Branch("muon.eta", eta, "eta[muon.size]/F");
     _tree.Branch("muon.phi", phi, "phi[muon.size]/F");
@@ -501,6 +506,7 @@ namespace susy {
   {
     std::vector<TString> notFound;
     _tree.SetBranchAddress("muon.size", &size);
+
     if(_tree.GetBranchStatus("muon.pt")) _tree.SetBranchAddress("muon.pt", pt);
     else if(!_tree.GetBranch("muon.pt")) notFound.push_back("muon.pt");
     if(_tree.GetBranchStatus("muon.eta")) _tree.SetBranchAddress("muon.eta", eta);
@@ -551,7 +557,7 @@ namespace susy {
     else if(!_tree.GetBranch("muon.isLoose")) notFound.push_back("muon.isLoose");
     if(_tree.GetBranchStatus("muon.isTight")) _tree.SetBranchAddress("muon.isTight", isTight);
     else if(!_tree.GetBranch("muon.isTight")) notFound.push_back("muon.isTight");
-    
+
     for(unsigned iN(0); iN != notFound.size(); ++iN)
       std::cerr << "Branch " << notFound[iN] << " not found in input" << std::endl;
   }
@@ -630,6 +636,7 @@ namespace susy {
   JetVarsArray::setBranches(TTree& _tree)
   {
     _tree.Branch("jet.size", &size, "jet.size/i");
+
     _tree.Branch("jet.pt", pt, "pt[jet.size]/F");
     _tree.Branch("jet.eta", eta, "eta[jet.size]/F");
     _tree.Branch("jet.phi", phi, "phi[jet.size]/F");
@@ -659,6 +666,7 @@ namespace susy {
   {
     std::vector<TString> notFound;
     _tree.SetBranchAddress("jet.size", &size);
+
     if(_tree.GetBranchStatus("jet.pt")) _tree.SetBranchAddress("jet.pt", pt);
     else if(!_tree.GetBranch("jet.pt")) notFound.push_back("jet.pt");
     if(_tree.GetBranchStatus("jet.eta")) _tree.SetBranchAddress("jet.eta", eta);
@@ -703,7 +711,7 @@ namespace susy {
     else if(!_tree.GetBranch("jet.passPUJetIdLoose")) notFound.push_back("jet.passPUJetIdLoose");
     if(_tree.GetBranchStatus("jet.isLoose")) _tree.SetBranchAddress("jet.isLoose", isLoose);
     else if(!_tree.GetBranch("jet.isLoose")) notFound.push_back("jet.isLoose");
-    
+
     for(unsigned iN(0); iN != notFound.size(); ++iN)
       std::cerr << "Branch " << notFound[iN] << " not found in input" << std::endl;
   }
@@ -776,6 +784,7 @@ namespace susy {
   VertexVarsArray::setBranches(TTree& _tree)
   {
     _tree.Branch("vertex.size", &size, "vertex.size/i");
+
     _tree.Branch("vertex.x", x, "x[vertex.size]/F");
     _tree.Branch("vertex.y", y, "y[vertex.size]/F");
     _tree.Branch("vertex.z", z, "z[vertex.size]/F");
@@ -792,6 +801,7 @@ namespace susy {
   {
     std::vector<TString> notFound;
     _tree.SetBranchAddress("vertex.size", &size);
+
     if(_tree.GetBranchStatus("vertex.x")) _tree.SetBranchAddress("vertex.x", x);
     else if(!_tree.GetBranch("vertex.x")) notFound.push_back("vertex.x");
     if(_tree.GetBranchStatus("vertex.y")) _tree.SetBranchAddress("vertex.y", y);
@@ -810,7 +820,7 @@ namespace susy {
     else if(!_tree.GetBranch("vertex.nTracks")) notFound.push_back("vertex.nTracks");
     if(_tree.GetBranchStatus("vertex.isGood")) _tree.SetBranchAddress("vertex.isGood", isGood);
     else if(!_tree.GetBranch("vertex.isGood")) notFound.push_back("vertex.isGood");
-    
+
     for(unsigned iN(0); iN != notFound.size(); ++iN)
       std::cerr << "Branch " << notFound[iN] << " not found in input" << std::endl;
   }
@@ -924,4 +934,5 @@ namespace susy {
     if(_setJet) jetArray_.setBranches(*output_);
     if(_setVertex) vertexArray_.setBranches(*output_);
   }
+
 }
