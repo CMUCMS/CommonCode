@@ -1,9 +1,10 @@
 ### MODIFY THE FOLLOWING LINE FOR YOUR SETUP ###
-SUSYNTUPLIZER=$(CMSSW_BASE)/src/SUSYPhotonAnalysis/SusyNtuplizer/src
+#SUSYNTUPLIZER=$(CMSSW_BASE)/src/SUSYPhotonAnalysis/SusyNtuplizer/src
+SUSYNTUPLIZER=$(CMSSW_BASE)/src/SusyAnalysis/SusyNtuplizer/src
 ################################################
 
 TARGET = libCMUCommon.so
-STANDALONESRCFILES = Utilities.cc ObjectSelector.cc ObjectVars.cc ObjectTree.cc
+STANDALONESRCFILES = Utilities.cc ObjectSelector.cc ObjectVars.cc ObjectTree.cc GenVisualizer.cc
 RA3SRCFILES = SimpleEventProducer.cc PFParticleBugFix.cc
 STANDALONEOBJECTS = $(patsubst %.cc,%.o,$(STANDALONESRCFILES))
 OBJECTS = $(STANDALONEOBJECTS) $(patsubst %.cc,%.o,$(RA3SRCFILES))

@@ -6,71 +6,137 @@
 #include "TTree.h"
 #include "TObjArray.h"
 #include "TString.h"
+#include "TList.h"
 #include "TROOT.h"
 #include "TSystem.h"
 
 #include <iostream>
 
-void
-genDecaySkim(TString const& _decayChains, TTree& _input, TString const& _outputName)
+class GenDecaySkim {
+public:
+  GenDecaySkim();
+  ~GenDecaySkim();
+  bool initialize(char const*, char const*);
+  bool run(char const*);
+  bool finalize();
+  void setThrow(bool _val) { throw_ = _val; }
+private:
+  TTree* output_;
+  GenDecayFilterRA3* filter_;
+  bool throw_;
+};
+
+GenDecaySkim::GenDecaySkim() :
+  output_(0),
+  filter_(0),
+  throw_(false)
 {
   gROOT->LoadMacro(TString(gSystem->Getenv("CMSSW_BASE")) + "/src/Toolset/GenTreeViewer/test/GenDecayFilterRA3.cc+");
+}
 
-  TFile* outputFile(TFile::Open(_outputName, "recreate"));
-  if(!outputFile || outputFile->IsZombie())
-    throw std::runtime_error("IOError");
+GenDecaySkim::~GenDecaySkim()
+{
+  if(output_) delete output_->GetCurrentFile();
+  delete filter_;
+}
+
+bool
+GenDecaySkim::initialize(char const* _outputDir, char const* _decayChains)
+{
+  TString outputName(_outputDir);
+  if(!outputName.Contains(".root")) outputName += "/susyEvents.root";
+
+  TFile* outputFile(TFile::Open(outputName, "recreate"));
+  if(!outputFile || outputFile->IsZombie()){
+    std::cout << "Output " << outputName << " not opened" << std::endl;
+    delete outputFile;
+    if(throw_) throw std::runtime_error("IOError");
+    else return false;
+  }
+
+  outputFile->cd();
+  output_ = new TTree("susyTree", "SUSY Events");
+  output_->SetAutoSave(10000000);
+
+  filter_ = new GenDecayFilterRA3(_decayChains);
+
+  return true;
+}
+
+bool
+GenDecaySkim::run(char const* _sourcePath)
+{
+  TChain input("susyTree");
+  input.Add(_sourcePath);
+
+  if(input.GetEntries() == 0) return false;
+
+  input.SetBranchStatus("*", 0);
+  input.SetBranchStatus("genParticles*", 1);
+
+  susy::Event event;
+  event.setInput(input);
 
   TChain fullInput("susyTree");
+  fullInput.Add(_sourcePath);
 
-  if(_input.InheritsFrom(TChain::Class())){
-    TChain& chain(static_cast<TChain&>(_input));
-    TObjArray* fileElems(chain.GetListOfFiles());
-    for(int iE(0); iE != fileElems->GetEntries(); ++iE)
-      fullInput.Add(fileElems->At(iE)->GetTitle());
-  }
-  else
-    fullInput.Add(_input.GetCurrentFile()->GetName());
-
-  susy::Event* event(new susy::Event);
-  event->setInput(_input);
-
-  susy::Event* fullEvent(new susy::Event);
-  fullEvent->setInput(fullInput);
-
-  outputFile->cd();
-  TTree* output(new TTree("susyTree", "SUSY Events"));
-  output->SetAutoSave(10000000);
-  fullEvent->addOutput(*output);
-
-  GenDecayFilterRA3 filter(_decayChains);
+  susy::Event fullEvent;
+  fullEvent.setInput(fullInput);
+  fullEvent.addOutput(*output_);
 
   long iEntry(0);
-  while(event->getEntry(iEntry++) > 0){
+  while(event.getEntry(iEntry++) > 0){
     if(iEntry % 10000 == 1) std::cout << iEntry << std::endl;
 
-    if(!filter.pass(*event)) continue;
+    if(!filter_->pass(event)) continue;
 
-    fullEvent->getEntry(iEntry - 1);
-    output->Fill();
+    fullEvent.getEntry(iEntry - 1);
+    output_->Fill();
   }
 
-  delete event;
-  delete fullEvent;
+  event.releaseTrees();
+  fullEvent.releaseTrees();
 
-  outputFile->cd();
-  output->Write();
-  delete outputFile;
+  return true;
+}
+
+bool
+GenDecaySkim::finalize()
+{
+  if(output_){
+    TFile* outputFile(output_->GetCurrentFile());
+    outputFile->cd();
+    outputFile->Write();
+    delete outputFile;
+  }
+  output_ = 0;
+
+  delete filter_;
+  filter_ = 0;
+
+  return true;
+}
+
+void
+genDecaySkim(TString const& _decayChains, TString const& _sourcePath, TString const& _outputName)
+{
+  GenDecaySkim skim;
+  if(!skim.initialize(_outputName, _decayChains)) return;
+
+  TObjArray* sourcePaths(_sourcePath.Tokenize(" "));
+  for(int iS(0); iS != sourcePaths->GetEntries(); ++iS)
+    if(!skim.run(sourcePaths->At(iS)->GetName())) return;
+  delete sourcePaths;
+
+  skim.finalize();
 }
 
 void
 genDecaySkim(TString const& _decayChains, TObjArray* _urls, TObjArray* _outputNames)
 {
-  TChain input("susyTree");
-  input.AddFileInfoList(_urls);
-  input.SetBranchStatus("*", 0);
-  input.SetBranchStatus("genParticles*", 1);
-
-  TString outputName(_outputNames->At(0)->GetName());
-
-  genDecaySkim(_decayChains, input, outputName);
+  GenDecaySkim skim;
+  if(!skim.initialize(_outputNames->At(0)->GetName(), _decayChains)) return;
+  for(int iS(0); iS != _urls->GetEntries(); ++iS)
+    if(!skim.run(_urls->At(iS)->GetName())) return;
+  skim.finalize();
 }

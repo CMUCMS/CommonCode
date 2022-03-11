@@ -10,10 +10,10 @@
 #include <iostream>
 
 void
-getLumiList(TObjArray* _urls, TObjArray* _outputName)
+getLumiList(TString const& _sourceName, TString const& _outputName)
 {
   TChain input("susyTree");
-  input.AddFileInfoList(_urls);
+  input.Add(_sourceName);
   input.SetBranchStatus("*", 0);
   input.SetBranchStatus("runNumber", 1);
   input.SetBranchStatus("luminosityBlockNumber", 1);
@@ -40,7 +40,7 @@ getLumiList(TObjArray* _urls, TObjArray* _outputName)
     currentSet->insert(currentLumi);
   }
 
-  std::ofstream output(_outputName->At(0)->GetName());
+  std::ofstream output(_outputName.Data());
   output << "{";
   std::map<int, std::set<int> >::iterator rItr(lumiList.begin());
   while(rItr != lumiList.end()){
@@ -73,31 +73,4 @@ getLumiList(TObjArray* _urls, TObjArray* _outputName)
   output.close();
 
   delete event;
-}
-
-void
-getLumiList(TString const& _dirPath, TString const& _outputName)
-{
-  void* dirp(gSystem->OpenDirectory(_dirPath));
-  if(dirp == 0){
-    std::cerr << "Cannot open directory " << _dirPath << std::endl;
-    return;
-  }
-
-  TObjArray fileNames;
-  fileNames.SetOwner(true);
-
-  TString fileName;
-  while((fileName = gSystem->GetDirEntry(dirp)) != ""){
-    if(!fileName.Contains(".root")) continue;
-    fileNames.Add(new TObjString(_dirPath + "/" + fileName));
-  }
-
-  gSystem->FreeDirectory(dirp);
-
-  TObjArray outputNames;
-  outputNames.SetOwner(true);
-  outputNames.Add(new TObjString(_outputName));
-
-  getLumiList(&fileNames, &outputNames);
 }

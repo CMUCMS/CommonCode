@@ -64,6 +64,7 @@ namespace susy {
     bool isTightLV[NMAX];
   };
 
+
   class ElectronVarsArray {
   public:
     ElectronVarsArray() : size(0) {}
@@ -109,11 +110,13 @@ namespace susy {
     unsigned char nPixelHits[NMAX];
     unsigned char nMissingHits[NMAX];
     bool passConversionVeto[NMAX];
+    bool isEcalDriven[NMAX];
     bool isVeto[NMAX];
     bool isLoose[NMAX];
     bool isMedium[NMAX];
     bool isTight[NMAX];
   };
+
 
   class MuonVarsArray {
   public:
@@ -154,6 +157,7 @@ namespace susy {
     bool isTight[NMAX];
   };
 
+
   class JetVarsArray {
   public:
     JetVarsArray() : size(0) {}
@@ -174,16 +178,22 @@ namespace susy {
     float pz[NMAX];
     float energy[NMAX];
     float jecScale[NMAX];
+    float jecUncert[NMAX];
     float chFraction[NMAX];
     float nhFraction[NMAX];
     float ceFraction[NMAX];
     float neFraction[NMAX];
+    float quarkLikelihood[NMAX];
+    float gluonLikelihood[NMAX];
     short iSubdet[NMAX];
+    short algoFlavor[NMAX];
+    short physFlavor[NMAX];
     unsigned char nConstituents[NMAX];
     unsigned char nCharged[NMAX];
     bool passPUJetIdLoose[NMAX];
     bool isLoose[NMAX];
   };
+
 
   class VertexVarsArray {
   public:
@@ -207,6 +217,7 @@ namespace susy {
     unsigned short nTracks[NMAX];
     bool isGood[NMAX];
   };
+
 
   class ObjectTree {
   public:    
